@@ -17,6 +17,12 @@ public class Hand implements Comparable<Hand> {
 
   @Override
   public int compareTo(Hand o) {
-    return 0;
+    if (this.type != o.type) {
+      return this.type.ordinal() - o.type.ordinal();
+    }
+    // Simplistic tie-breaker: compare sums of chips
+    int thisSum = this.cards.stream().mapToInt(c -> c.rank().getChips()).sum();
+    int oSum = o.cards.stream().mapToInt(c -> c.rank().getChips()).sum();
+    return thisSum - oSum;
   }
 }

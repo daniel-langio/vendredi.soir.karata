@@ -4,13 +4,12 @@ import static vendredi.soir.karata.core.Card.*;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 @Getter
-@RequiredArgsConstructor
 public class Deck {
   public static final Deck ALL_CLUBS =
       new Deck(
@@ -84,10 +83,25 @@ public class Deck {
     this.cards = new ArrayList<>();
   }
 
+  public Deck(List<Card> cards) {
+    this.cards = new ArrayList<>(cards);
+  }
+
   public static Deck of(Deck... decksToAdd) {
     var cards = Stream.of(decksToAdd).map(Deck::getCards).flatMap(Collection::stream).toList();
 
     return new Deck(cards);
+  }
+
+  public void shuffle() {
+    Collections.shuffle(cards);
+  }
+
+  public Card draw() {
+    if (cards.isEmpty()) {
+      throw new IllegalStateException("Deck is empty");
+    }
+    return cards.remove(0);
   }
 
   @Override
