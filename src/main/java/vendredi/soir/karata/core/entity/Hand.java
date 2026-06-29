@@ -1,4 +1,4 @@
-package vendredi.soir.karata.core;
+package vendredi.soir.karata.core.entity;
 
 import java.util.List;
 import lombok.AccessLevel;

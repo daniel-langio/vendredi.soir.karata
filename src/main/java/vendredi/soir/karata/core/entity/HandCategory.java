@@ -1,4 +1,4 @@
-package vendredi.soir.karata.core;
+package vendredi.soir.karata.core.entity;
 
 public enum HandCategory {
   HIGH_CARD,

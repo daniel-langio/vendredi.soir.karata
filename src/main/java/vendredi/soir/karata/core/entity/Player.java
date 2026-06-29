@@ -1,4 +1,4 @@
-package vendredi.soir.karata.core;
+package vendredi.soir.karata.core.entity;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -26,12 +26,8 @@ public class Player {
   }
 
   public void receiveCard(Card card) {
-    // Hole cards are now managed by the Deal aggregate history.
-    // This method can be kept if we want to track something else, or removed.
-    // For now, let's keep it empty to fulfill the contract if needed, or remove it.
   }
 
   public void clearHand() {
-    // State is now derived from history.
   }
 }

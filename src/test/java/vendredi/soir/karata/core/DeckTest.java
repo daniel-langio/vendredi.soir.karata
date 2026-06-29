@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
+import vendredi.soir.karata.core.entity.Deck;
 
 @Slf4j
 class DeckTest {

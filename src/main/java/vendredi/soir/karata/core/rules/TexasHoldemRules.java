@@ -1,9 +1,18 @@
-package vendredi.soir.karata.core;
+package vendredi.soir.karata.core.rules;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import vendredi.soir.karata.core.action.Action;
+import vendredi.soir.karata.core.action.PlayerAction;
+import vendredi.soir.karata.core.action.Bet;
+import vendredi.soir.karata.core.action.Raise;
+import vendredi.soir.karata.core.action.Call;
+import vendredi.soir.karata.core.entity.Card;
+import vendredi.soir.karata.core.entity.Deal;
+import vendredi.soir.karata.core.entity.Hand;
+import vendredi.soir.karata.core.entity.Player;
 import vendredi.soir.karata.core.factory.HandFactory;
 
 public class TexasHoldemRules implements Rules {
@@ -11,13 +20,13 @@ public class TexasHoldemRules implements Rules {
   @Override
   public boolean isActionLegal(Deal deal, Action action) {
     if (action instanceof PlayerAction pa) {
-      if (pa instanceof PlayerAction.Bet bet) {
+      if (pa instanceof Bet bet) {
         return bet.player().getChips() >= bet.amount();
       }
-      if (pa instanceof PlayerAction.Raise raise) {
+      if (pa instanceof Raise raise) {
         return raise.player().getChips() >= raise.amount();
       }
-      if (pa instanceof PlayerAction.Call call) {
+      if (pa instanceof Call call) {
         return call.player().getChips() >= call.amount();
       }
     }

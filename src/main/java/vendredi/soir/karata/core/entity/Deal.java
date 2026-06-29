@@ -1,9 +1,19 @@
-package vendredi.soir.karata.core;
+package vendredi.soir.karata.core.entity;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.Getter;
+import vendredi.soir.karata.core.action.Action;
+import vendredi.soir.karata.core.action.DealerAction;
+import vendredi.soir.karata.core.action.PlayerAction;
+import vendredi.soir.karata.core.action.Bet;
+import vendredi.soir.karata.core.action.Raise;
+import vendredi.soir.karata.core.action.Call;
+import vendredi.soir.karata.core.action.Fold;
+import vendredi.soir.karata.core.action.DealHoleCard;
+import vendredi.soir.karata.core.action.RevealCards;
+import vendredi.soir.karata.core.action.AwardPot;
 
 @Getter
 public class Deal {
@@ -22,15 +32,15 @@ public class Deal {
 
   private void applyActionEffects(Action action) {
     if (action instanceof PlayerAction pa) {
-      if (pa instanceof PlayerAction.Bet bet) {
+      if (pa instanceof Bet bet) {
         bet.player().removeChips(bet.amount());
-      } else if (pa instanceof PlayerAction.Raise raise) {
+      } else if (pa instanceof Raise raise) {
         raise.player().removeChips(raise.amount());
-      } else if (pa instanceof PlayerAction.Call call) {
+      } else if (pa instanceof Call call) {
         call.player().removeChips(call.amount());
       }
     } else if (action instanceof DealerAction da) {
-      if (da instanceof DealerAction.AwardPot ap) {
+      if (da instanceof AwardPot ap) {
         ap.winner().addChips(ap.amount());
       }
     }
@@ -39,14 +49,14 @@ public class Deal {
   // Projections
   public List<Card> getHoleCards(Player player) {
     return history.stream()
-        .filter(a -> a instanceof DealerAction.DealHoleCard dhc && dhc.player().equals(player))
-        .map(a -> ((DealerAction.DealHoleCard) a).card())
+        .filter(a -> a instanceof DealHoleCard dhc && dhc.player().equals(player))
+        .map(a -> ((DealHoleCard) a).card())
         .collect(Collectors.toList());
   }
 
   public boolean hasFolded(Player player) {
     return history.stream()
-        .anyMatch(a -> a instanceof PlayerAction.Fold f && f.player().equals(player));
+        .anyMatch(a -> a instanceof Fold f && f.player().equals(player));
   }
 
   public long getContribution(Player player) {
@@ -54,9 +64,9 @@ public class Deal {
         .filter(a -> a instanceof PlayerAction pa && pa.player().equals(player))
         .mapToLong(
             a -> {
-              if (a instanceof PlayerAction.Bet bet) return bet.amount();
-              if (a instanceof PlayerAction.Raise raise) return raise.amount();
-              if (a instanceof PlayerAction.Call call) return call.amount();
+              if (a instanceof Bet bet) return bet.amount();
+              if (a instanceof Raise raise) return raise.amount();
+              if (a instanceof Call call) return call.amount();
               return 0L;
             })
         .sum();
@@ -66,9 +76,9 @@ public class Deal {
     return history.stream()
         .mapToLong(
             a -> {
-              if (a instanceof PlayerAction.Bet bet) return bet.amount();
-              if (a instanceof PlayerAction.Raise raise) return raise.amount();
-              if (a instanceof PlayerAction.Call call) return call.amount();
+              if (a instanceof Bet bet) return bet.amount();
+              if (a instanceof Raise raise) return raise.amount();
+              if (a instanceof Call call) return call.amount();
               return 0L;
             })
         .sum();
@@ -76,8 +86,8 @@ public class Deal {
 
   public List<Card> getBoard() {
     return history.stream()
-        .filter(a -> a instanceof DealerAction.RevealCards)
-        .flatMap(a -> ((DealerAction.RevealCards) a).cards().stream())
+        .filter(a -> a instanceof RevealCards)
+        .flatMap(a -> ((RevealCards) a).cards().stream())
         .collect(Collectors.toList());
   }
 }

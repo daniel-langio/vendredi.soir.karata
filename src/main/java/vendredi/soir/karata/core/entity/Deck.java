@@ -1,6 +1,6 @@
-package vendredi.soir.karata.core;
+package vendredi.soir.karata.core.entity;
 
-import static vendredi.soir.karata.core.Card.*;
+import static vendredi.soir.karata.core.entity.Card.*;
 
 import java.util.ArrayList;
 import java.util.Collection;

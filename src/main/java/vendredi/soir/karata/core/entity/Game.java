@@ -1,8 +1,9 @@
-package vendredi.soir.karata.core;
+package vendredi.soir.karata.core.entity;
 
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
+import vendredi.soir.karata.core.rules.Rules;
 
 @Getter
 public class Game {

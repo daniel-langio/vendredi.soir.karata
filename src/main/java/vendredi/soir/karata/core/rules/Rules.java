@@ -1,7 +1,11 @@
-package vendredi.soir.karata.core;
+package vendredi.soir.karata.core.rules;
 
 import java.util.List;
 import java.util.Map;
+import vendredi.soir.karata.core.action.Action;
+import vendredi.soir.karata.core.entity.Deal;
+import vendredi.soir.karata.core.entity.Hand;
+import vendredi.soir.karata.core.entity.Player;
 
 public interface Rules {
   boolean isActionLegal(Deal deal, Action action);

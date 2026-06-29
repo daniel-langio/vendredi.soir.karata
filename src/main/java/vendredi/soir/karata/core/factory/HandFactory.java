@@ -1,15 +1,15 @@
 package vendredi.soir.karata.core.factory;
 
-import static vendredi.soir.karata.core.HandCategory.*;
+import static vendredi.soir.karata.core.entity.HandCategory.*;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
-import vendredi.soir.karata.core.Card;
-import vendredi.soir.karata.core.Deck;
-import vendredi.soir.karata.core.Hand;
-import vendredi.soir.karata.core.HandCategory;
+import vendredi.soir.karata.core.entity.Card;
+import vendredi.soir.karata.core.entity.Deck;
+import vendredi.soir.karata.core.entity.Hand;
+import vendredi.soir.karata.core.entity.HandCategory;
 
 public class HandFactory {
   public static Hand from(Deck deck) {
@@ -58,7 +58,6 @@ public class HandFactory {
       return from(new Deck(cards));
     }
 
-    // Simplified: find best 5-card combination (combinations of 7 choose 5 = 21)
     List<List<Card>> combinations = new ArrayList<>();
     generateCombinations(cards, 5, 0, new ArrayList<>(), combinations);
 
@@ -92,16 +91,14 @@ public class HandFactory {
   private static boolean isStraight(List<Card> cards) {
     var ranks =
         cards.stream()
-            .map(card -> card.rank().getChips()) // 2..14 (Ace = 14)
+            .map(card -> card.rank().getChips())
             .sorted()
             .toList();
 
-    // Duplicate ranks cannot form a straight.
     if (ranks.stream().distinct().count() != 5) {
       return false;
     }
 
-    // Wheel straight: A-2-3-4-5
     if (ranks.equals(List.of(2, 3, 4, 5, 14))) {
       return true;
     }
