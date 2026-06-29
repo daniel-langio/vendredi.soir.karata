@@ -11,6 +11,7 @@ import vendredi.soir.karata.core.action.Raise;
 import vendredi.soir.karata.core.action.Call;
 import vendredi.soir.karata.core.entity.Card;
 import vendredi.soir.karata.core.entity.Deal;
+import vendredi.soir.karata.core.entity.Game;
 import vendredi.soir.karata.core.entity.Hand;
 import vendredi.soir.karata.core.entity.Player;
 import vendredi.soir.karata.core.factory.HandFactory;
@@ -18,16 +19,16 @@ import vendredi.soir.karata.core.factory.HandFactory;
 public class TexasHoldemRules implements Rules {
 
   @Override
-  public boolean isActionLegal(Deal deal, Action action) {
+  public boolean isActionLegal(Game game, Deal deal, Action action) {
     if (action instanceof PlayerAction pa) {
       if (pa instanceof Bet bet) {
-        return bet.player().getChips() >= bet.amount();
+        return game.getChips(bet.player()) >= bet.amount();
       }
       if (pa instanceof Raise raise) {
-        return raise.player().getChips() >= raise.amount();
+        return game.getChips(raise.player()) >= raise.amount();
       }
       if (pa instanceof Call call) {
-        return call.player().getChips() >= call.amount();
+        return game.getChips(call.player()) >= call.amount();
       }
     }
     return true;

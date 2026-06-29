@@ -8,11 +8,16 @@ import vendredi.soir.karata.core.rules.Rules;
 public class Dealer {
   private final Rules rules;
 
-  public void execute(Deal deal, Action action) {
-    if (!rules.isActionLegal(deal, action)) {
+  public void execute(Game game, Deal deal, Action action) {
+    if (!rules.isActionLegal(game, deal, action)) {
       throw new IllegalArgumentException("Illegal action");
     }
 
     deal.apply(action);
+  }
+
+  public void execute(Game game, Action action) {
+    // Game level actions (like InitializePlayerChips)
+    game.addAction(action);
   }
 }

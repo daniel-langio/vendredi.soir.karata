@@ -13,7 +13,6 @@ import vendredi.soir.karata.core.action.Call;
 import vendredi.soir.karata.core.action.Fold;
 import vendredi.soir.karata.core.action.DealHoleCard;
 import vendredi.soir.karata.core.action.RevealCards;
-import vendredi.soir.karata.core.action.AwardPot;
 
 @Getter
 public class Deal {
@@ -27,23 +26,6 @@ public class Deal {
 
   public void apply(Action action) {
     history.add(action);
-    applyActionEffects(action);
-  }
-
-  private void applyActionEffects(Action action) {
-    if (action instanceof PlayerAction pa) {
-      if (pa instanceof Bet bet) {
-        bet.player().removeChips(bet.amount());
-      } else if (pa instanceof Raise raise) {
-        raise.player().removeChips(raise.amount());
-      } else if (pa instanceof Call call) {
-        call.player().removeChips(call.amount());
-      }
-    } else if (action instanceof DealerAction da) {
-      if (da instanceof AwardPot ap) {
-        ap.winner().addChips(ap.amount());
-      }
-    }
   }
 
   // Projections
