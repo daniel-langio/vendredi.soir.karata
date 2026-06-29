@@ -2,6 +2,7 @@ package vendredi.soir.karata.core.factory;
 
 import static vendredi.soir.karata.core.HandCategory.*;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -50,6 +51,38 @@ public class HandFactory {
                                             : HIGH_CARD;
 
     return Hand.of(type, cards);
+  }
+
+  public static Hand evaluateBestHand(List<Card> cards) {
+    if (cards.size() <= 5) {
+      return from(new Deck(cards));
+    }
+
+    // Simplified: find best 5-card combination (combinations of 7 choose 5 = 21)
+    List<List<Card>> combinations = new ArrayList<>();
+    generateCombinations(cards, 5, 0, new ArrayList<>(), combinations);
+
+    Hand bestHand = null;
+    for (List<Card> combo : combinations) {
+      Hand currentHand = from(new Deck(combo));
+      if (bestHand == null || currentHand.compareTo(bestHand) > 0) {
+        bestHand = currentHand;
+      }
+    }
+    return bestHand;
+  }
+
+  private static void generateCombinations(
+      List<Card> cards, int k, int start, List<Card> current, List<List<Card>> result) {
+    if (current.size() == k) {
+      result.add(new ArrayList<>(current));
+      return;
+    }
+    for (int i = start; i < cards.size(); i++) {
+      current.add(cards.get(i));
+      generateCombinations(cards, k, i + 1, current, result);
+      current.remove(current.size() - 1);
+    }
   }
 
   private static boolean isFlush(List<Card> cards) {
