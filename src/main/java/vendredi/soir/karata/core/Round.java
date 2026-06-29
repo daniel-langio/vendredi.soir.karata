@@ -30,12 +30,14 @@ public class Round {
 
   public void recordAction(PlayerAction action) {
     this.actions.add(action);
-    if (action.getType() == PlayerActionType.FOLD) {
-      action.getPlayer().setFolded(true);
-    }
   }
 
   public List<Player> getActivePlayers() {
-    return participants.stream().filter(p -> !p.isFolded()).toList();
+    return participants.stream().filter(p -> !hasFolded(p)).toList();
+  }
+
+  public boolean hasFolded(Player player) {
+    return actions.stream()
+        .anyMatch(a -> a.player().equals(player) && a instanceof PlayerAction.Fold);
   }
 }

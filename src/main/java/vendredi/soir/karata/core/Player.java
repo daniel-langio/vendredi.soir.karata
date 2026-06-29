@@ -11,15 +11,11 @@ public class Player {
   private final String name;
   private long chips;
   private List<Card> holeCards;
-  private boolean folded;
-  private boolean allIn;
 
   public Player(String name, long initialChips) {
     this.name = name;
     this.chips = initialChips;
     this.holeCards = new ArrayList<>();
-    this.folded = false;
-    this.allIn = false;
   }
 
   public void addChips(long amount) {
@@ -39,7 +35,5 @@ public class Player {
 
   public void clearHand() {
     this.holeCards.clear();
-    this.folded = false;
-    this.allIn = false;
   }
 }
