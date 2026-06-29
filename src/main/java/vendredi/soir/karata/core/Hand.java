@@ -20,9 +20,21 @@ public class Hand implements Comparable<Hand> {
     if (this.type != o.type) {
       return this.type.ordinal() - o.type.ordinal();
     }
-    // Simplistic tie-breaker: compare sums of chips
-    int thisSum = this.cards.stream().mapToInt(c -> c.rank().getChips()).sum();
-    int oSum = o.cards.stream().mapToInt(c -> c.rank().getChips()).sum();
-    return thisSum - oSum;
+    // Better tie-breaker: compare ranks of sorted cards (descending)
+    List<Integer> thisRanks = this.cards.stream()
+        .map(c -> c.rank().getChips())
+        .sorted(java.util.Comparator.reverseOrder())
+        .toList();
+    List<Integer> oRanks = o.cards.stream()
+        .map(c -> c.rank().getChips())
+        .sorted(java.util.Comparator.reverseOrder())
+        .toList();
+
+    for (int i = 0; i < Math.min(thisRanks.size(), oRanks.size()); i++) {
+      if (!thisRanks.get(i).equals(oRanks.get(i))) {
+        return thisRanks.get(i) - oRanks.get(i);
+      }
+    }
+    return 0;
   }
 }

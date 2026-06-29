@@ -1,7 +1,5 @@
 package vendredi.soir.karata.core;
 
-import java.util.ArrayList;
-import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -10,12 +8,10 @@ import lombok.Setter;
 public class Player {
   private final String name;
   private long chips;
-  private List<Card> holeCards;
 
   public Player(String name, long initialChips) {
     this.name = name;
     this.chips = initialChips;
-    this.holeCards = new ArrayList<>();
   }
 
   public void addChips(long amount) {
@@ -30,10 +26,12 @@ public class Player {
   }
 
   public void receiveCard(Card card) {
-    this.holeCards.add(card);
+    // Hole cards are now managed by the Deal aggregate history.
+    // This method can be kept if we want to track something else, or removed.
+    // For now, let's keep it empty to fulfill the contract if needed, or remove it.
   }
 
   public void clearHand() {
-    this.holeCards.clear();
+    // State is now derived from history.
   }
 }

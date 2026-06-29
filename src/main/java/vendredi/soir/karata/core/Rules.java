@@ -4,13 +4,13 @@ import java.util.List;
 import java.util.Map;
 
 public interface Rules {
-  boolean isActionLegal(Game game, Action action);
+  boolean isActionLegal(Deal deal, Action action);
 
-  Player determineNextPlayer(Game game);
+  Player determineNextPlayer(Deal deal, List<Player> players);
 
-  Map<Player, Hand> evaluateWinners(Game game);
+  Map<Player, Hand> evaluateWinners(Deal deal, List<Player> players);
 
-  long getMinimumRaise(Game game);
+  long getMinimumRaise(Deal deal);
 
-  List<Player> getBettingOrder(Game game);
+  List<Player> getBettingOrder(List<Player> players);
 }

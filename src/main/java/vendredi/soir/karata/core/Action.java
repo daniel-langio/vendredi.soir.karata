@@ -6,6 +6,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 
 public sealed interface Action permits PlayerAction, DealerAction {
+}
+
+sealed interface PlayerAction extends Action
+    permits PlayerAction.Fold,
+        PlayerAction.Check,
+        PlayerAction.Call,
+        PlayerAction.Bet,
+        PlayerAction.Raise {
+  Player player();
 
   @Getter
   @Accessors(fluent = true)
@@ -67,23 +76,21 @@ public sealed interface Action permits PlayerAction, DealerAction {
   }
 }
 
-sealed interface PlayerAction extends Action
-    permits Action.Fold, Action.Check, Action.Call, Action.Bet, Action.Raise {
-  Player player();
-}
-
 sealed interface DealerAction extends Action
-    permits DealerAction.Shuffle, DealerAction.Deal, DealerAction.Reveal {
+    permits DealerAction.ShuffleDeck,
+        DealerAction.DealHoleCard,
+        DealerAction.RevealCards,
+        DealerAction.AwardPot {
 
   @Getter
   @Accessors(fluent = true)
   @RequiredArgsConstructor
-  final class Shuffle implements DealerAction {}
+  final class ShuffleDeck implements DealerAction {}
 
   @Getter
   @Accessors(fluent = true)
   @RequiredArgsConstructor
-  final class Deal implements DealerAction {
+  final class DealHoleCard implements DealerAction {
     private final Player player;
     private final Card card;
   }
@@ -91,7 +98,15 @@ sealed interface DealerAction extends Action
   @Getter
   @Accessors(fluent = true)
   @RequiredArgsConstructor
-  final class Reveal implements DealerAction {
+  final class RevealCards implements DealerAction {
     private final List<Card> cards;
+  }
+
+  @Getter
+  @Accessors(fluent = true)
+  @RequiredArgsConstructor
+  final class AwardPot implements DealerAction {
+    private final Player winner;
+    private final long amount;
   }
 }
