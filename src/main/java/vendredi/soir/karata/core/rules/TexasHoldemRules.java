@@ -4,11 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import vendredi.soir.karata.core.action.Action;
-import vendredi.soir.karata.core.action.PlayerAction;
-import vendredi.soir.karata.core.action.Bet;
-import vendredi.soir.karata.core.action.Raise;
-import vendredi.soir.karata.core.action.Call;
+import java.util.stream.Collectors;
+import vendredi.soir.karata.core.action.*;
 import vendredi.soir.karata.core.entity.Card;
 import vendredi.soir.karata.core.entity.Deal;
 import vendredi.soir.karata.core.entity.Game;
@@ -22,13 +19,16 @@ public class TexasHoldemRules implements Rules {
   public boolean isActionLegal(Game game, Deal deal, Action action) {
     if (action instanceof PlayerAction pa) {
       if (pa instanceof Bet bet) {
-        return game.getChips(bet.player()) >= bet.amount();
+        return game.getChips(bet.player()) >= bet.amount() && deal.getCurrentRoundBet() == 0;
       }
       if (pa instanceof Raise raise) {
-        return game.getChips(raise.player()) >= raise.amount();
+        return game.getChips(raise.player()) >= raise.amount() && raise.amount() >= getMinimumRaise(deal);
       }
       if (pa instanceof Call call) {
         return game.getChips(call.player()) >= call.amount();
+      }
+      if (pa instanceof Check) {
+        return deal.getCurrentRoundBet() == deal.getPlayerRoundContribution(pa.player());
       }
     }
     return true;
@@ -36,11 +36,27 @@ public class TexasHoldemRules implements Rules {
 
   @Override
   public Player determineNextPlayer(Deal deal, List<Player> players) {
-    List<Player> active =
-        players.stream()
-            .filter(p -> !deal.hasFolded(p))
-            .toList();
-    return active.isEmpty() ? null : active.get(0);
+    List<Player> active = players.stream()
+        .filter(p -> !deal.hasFolded(p))
+        .toList();
+
+    if (active.isEmpty()) return null;
+
+    // Simplified turn logic: find the last player who acted and pick the next one
+    Player lastActor = deal.getHistory().stream()
+        .filter(a -> a instanceof PlayerAction)
+        .map(a -> ((PlayerAction) a).player())
+        .reduce((first, second) -> second)
+        .orElse(null);
+
+    if (lastActor == null) return active.get(0);
+
+    int lastIndex = players.indexOf(lastActor);
+    for (int i = 1; i <= players.size(); i++) {
+      Player next = players.get((lastIndex + i) % players.size());
+      if (active.contains(next)) return next;
+    }
+    return null;
   }
 
   @Override
@@ -55,12 +71,19 @@ public class TexasHoldemRules implements Rules {
         }
       }
     }
-    return bestHands;
+
+    if (bestHands.isEmpty()) return Map.of();
+
+    Hand winningHand = bestHands.values().stream().max(Hand::compareTo).get();
+    return bestHands.entrySet().stream()
+        .filter(e -> e.getValue().compareTo(winningHand) == 0)
+        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
   }
 
   @Override
   public long getMinimumRaise(Deal deal) {
-    return 20;
+    // Simplified: double the current bet
+    return Math.max(20, deal.getCurrentRoundBet() * 2);
   }
 
   @Override
