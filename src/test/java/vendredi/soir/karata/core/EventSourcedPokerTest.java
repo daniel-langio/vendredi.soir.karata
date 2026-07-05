@@ -4,15 +4,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import vendredi.soir.karata.core.action.DealerAction;
-import vendredi.soir.karata.core.action.PlayerAction;
-import vendredi.soir.karata.core.action.ShuffleDeck;
-import vendredi.soir.karata.core.action.DealHoleCard;
-import vendredi.soir.karata.core.action.RevealCards;
 import vendredi.soir.karata.core.action.AwardPot;
 import vendredi.soir.karata.core.action.Bet;
 import vendredi.soir.karata.core.action.Call;
+import vendredi.soir.karata.core.action.DealHoleCard;
 import vendredi.soir.karata.core.action.InitializePlayerChips;
+import vendredi.soir.karata.core.action.RevealCards;
+import vendredi.soir.karata.core.action.ShuffleDeck;
 import vendredi.soir.karata.core.entity.Card;
 import vendredi.soir.karata.core.entity.Deal;
 import vendredi.soir.karata.core.entity.Dealer;

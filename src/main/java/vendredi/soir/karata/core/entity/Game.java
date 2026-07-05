@@ -2,17 +2,17 @@ package vendredi.soir.karata.core.entity;
 
 import java.util.ArrayList;
 import java.util.List;
-import vendredi.soir.karata.core.action.Action;
-import vendredi.soir.karata.core.action.PlayerAction;
-import vendredi.soir.karata.core.action.InitializePlayerChips;
-import vendredi.soir.karata.core.action.Bet;
-import vendredi.soir.karata.core.action.Raise;
-import vendredi.soir.karata.core.action.Call;
-import vendredi.soir.karata.core.action.SmallBlind;
-import vendredi.soir.karata.core.action.BigBlind;
-import vendredi.soir.karata.core.action.AwardPot;
-import vendredi.soir.karata.core.rules.Rules;
 import lombok.Getter;
+import vendredi.soir.karata.core.action.Action;
+import vendredi.soir.karata.core.action.AwardPot;
+import vendredi.soir.karata.core.action.Bet;
+import vendredi.soir.karata.core.action.BigBlind;
+import vendredi.soir.karata.core.action.Call;
+import vendredi.soir.karata.core.action.InitializePlayerChips;
+import vendredi.soir.karata.core.action.PlayerAction;
+import vendredi.soir.karata.core.action.Raise;
+import vendredi.soir.karata.core.action.SmallBlind;
+import vendredi.soir.karata.core.rules.Rules;
 
 @Getter
 public class Game {
@@ -51,28 +51,31 @@ public class Game {
     long chips = 0;
 
     // 1. Initial chips from game history
-    chips += history.stream()
-        .filter(a -> a instanceof InitializePlayerChips ipc && ipc.player().equals(player))
-        .mapToLong(a -> ((InitializePlayerChips) a).amount())
-        .sum();
+    chips +=
+        history.stream()
+            .filter(a -> a instanceof InitializePlayerChips ipc && ipc.player().equals(player))
+            .mapToLong(a -> ((InitializePlayerChips) a).amount())
+            .sum();
 
     // 2. Adjustments from all deals
     for (Deal deal : deals) {
-      chips += deal.getHistory().stream()
-          .mapToLong(a -> {
-            if (a instanceof PlayerAction pa && pa.player().equals(player)) {
-              if (a instanceof Bet bet) return -bet.amount();
-              if (a instanceof Raise raise) return -raise.amount();
-              if (a instanceof Call call) return -call.amount();
-              if (a instanceof SmallBlind sb) return -sb.amount();
-              if (a instanceof BigBlind bb) return -bb.amount();
-            }
-            if (a instanceof AwardPot ap && ap.winner().equals(player)) {
-              return ap.amount();
-            }
-            return 0L;
-          })
-          .sum();
+      chips +=
+          deal.getHistory().stream()
+              .mapToLong(
+                  a -> {
+                    if (a instanceof PlayerAction pa && pa.player().equals(player)) {
+                      if (a instanceof Bet bet) return -bet.amount();
+                      if (a instanceof Raise raise) return -raise.amount();
+                      if (a instanceof Call call) return -call.amount();
+                      if (a instanceof SmallBlind sb) return -sb.amount();
+                      if (a instanceof BigBlind bb) return -bb.amount();
+                    }
+                    if (a instanceof AwardPot ap && ap.winner().equals(player)) {
+                      return ap.amount();
+                    }
+                    return 0L;
+                  })
+              .sum();
     }
 
     return chips;

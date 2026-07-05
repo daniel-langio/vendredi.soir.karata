@@ -89,11 +89,7 @@ public class HandFactory {
   }
 
   private static boolean isStraight(List<Card> cards) {
-    var ranks =
-        cards.stream()
-            .map(card -> card.rank().getChips())
-            .sorted()
-            .toList();
+    var ranks = cards.stream().map(card -> card.rank().getChips()).sorted().toList();
 
     if (ranks.stream().distinct().count() != 5) {
       return false;

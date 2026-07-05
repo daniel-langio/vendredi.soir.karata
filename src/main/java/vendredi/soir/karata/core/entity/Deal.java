@@ -30,8 +30,7 @@ public class Deal {
   }
 
   public boolean hasFolded(Player player) {
-    return history.stream()
-        .anyMatch(a -> a instanceof Fold f && f.player().equals(player));
+    return history.stream().anyMatch(a -> a instanceof Fold f && f.player().equals(player));
   }
 
   public boolean isAllIn(Player player, Game game) {
@@ -41,14 +40,15 @@ public class Deal {
   public long getContribution(Player player) {
     return history.stream()
         .filter(a -> a instanceof PlayerAction pa && pa.player().equals(player))
-        .mapToLong(a -> {
-          if (a instanceof Bet bet) return bet.amount();
-          if (a instanceof Raise raise) return raise.amount();
-          if (a instanceof Call call) return call.amount();
-          if (a instanceof SmallBlind sb) return sb.amount();
-          if (a instanceof BigBlind bb) return bb.amount();
-          return 0L;
-        })
+        .mapToLong(
+            a -> {
+              if (a instanceof Bet bet) return bet.amount();
+              if (a instanceof Raise raise) return raise.amount();
+              if (a instanceof Call call) return call.amount();
+              if (a instanceof SmallBlind sb) return sb.amount();
+              if (a instanceof BigBlind bb) return bb.amount();
+              return 0L;
+            })
         .sum();
   }
 
@@ -56,31 +56,36 @@ public class Deal {
     List<Action> roundActions = getActionsInCurrentPhase();
     return roundActions.stream()
         .filter(a -> a instanceof PlayerAction pa && pa.player().equals(player))
-        .mapToLong(a -> {
-          if (a instanceof Bet bet) return bet.amount();
-          if (a instanceof Raise raise) return raise.amount();
-          if (a instanceof Call call) return call.amount();
-          if (a instanceof SmallBlind sb) return sb.amount();
-          if (a instanceof BigBlind bb) return bb.amount();
-          return 0L;
-        })
-        .sum();
-  }
-
-  public long getCurrentRoundBet() {
-    List<Action> roundActions = getActionsInCurrentPhase();
-    Map<Player, Long> contributions = roundActions.stream()
-        .filter(a -> a instanceof PlayerAction)
-        .map(a -> (PlayerAction) a)
-        .collect(Collectors.groupingBy(PlayerAction::player,
-            Collectors.summingLong(a -> {
+        .mapToLong(
+            a -> {
               if (a instanceof Bet bet) return bet.amount();
               if (a instanceof Raise raise) return raise.amount();
               if (a instanceof Call call) return call.amount();
               if (a instanceof SmallBlind sb) return sb.amount();
               if (a instanceof BigBlind bb) return bb.amount();
               return 0L;
-            })));
+            })
+        .sum();
+  }
+
+  public long getCurrentRoundBet() {
+    List<Action> roundActions = getActionsInCurrentPhase();
+    Map<Player, Long> contributions =
+        roundActions.stream()
+            .filter(a -> a instanceof PlayerAction)
+            .map(a -> (PlayerAction) a)
+            .collect(
+                Collectors.groupingBy(
+                    PlayerAction::player,
+                    Collectors.summingLong(
+                        a -> {
+                          if (a instanceof Bet bet) return bet.amount();
+                          if (a instanceof Raise raise) return raise.amount();
+                          if (a instanceof Call call) return call.amount();
+                          if (a instanceof SmallBlind sb) return sb.amount();
+                          if (a instanceof BigBlind bb) return bb.amount();
+                          return 0L;
+                        })));
     return contributions.values().stream().max(Long::compare).orElse(0L);
   }
 
@@ -106,14 +111,15 @@ public class Deal {
 
   public long getTotalPot() {
     return history.stream()
-        .mapToLong(a -> {
-          if (a instanceof Bet bet) return bet.amount();
-          if (a instanceof Raise raise) return raise.amount();
-          if (a instanceof Call call) return call.amount();
-          if (a instanceof SmallBlind sb) return sb.amount();
-          if (a instanceof BigBlind bb) return bb.amount();
-          return 0L;
-        })
+        .mapToLong(
+            a -> {
+              if (a instanceof Bet bet) return bet.amount();
+              if (a instanceof Raise raise) return raise.amount();
+              if (a instanceof Call call) return call.amount();
+              if (a instanceof SmallBlind sb) return sb.amount();
+              if (a instanceof BigBlind bb) return bb.amount();
+              return 0L;
+            })
         .sum();
   }
 

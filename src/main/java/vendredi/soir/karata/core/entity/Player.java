@@ -8,9 +8,7 @@ import lombok.RequiredArgsConstructor;
 public class Player {
   private final String name;
 
-  public void receiveCard(Card card) {
-  }
+  public void receiveCard(Card card) {}
 
-  public void clearHand() {
-  }
+  public void clearHand() {}
 }

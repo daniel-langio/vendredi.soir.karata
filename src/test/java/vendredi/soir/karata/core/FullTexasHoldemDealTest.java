@@ -39,10 +39,11 @@ class FullTexasHoldemDealTest {
 
     // 6. Pre-flop Betting
     dealer.execute(game, deal, new Call(alice, 10)); // Alice calls big blind (total 20)
-    dealer.execute(game, deal, new Check(bob));    // Bob checks
+    dealer.execute(game, deal, new Check(bob)); // Bob checks
 
     // 7. Flop
-    dealer.execute(game, deal, new RevealCards(List.of(Card.CLUB_TWO, Card.CLUB_THREE, Card.CLUB_FOUR)));
+    dealer.execute(
+        game, deal, new RevealCards(List.of(Card.CLUB_TWO, Card.CLUB_THREE, Card.CLUB_FOUR)));
 
     // 8. Flop Betting
     dealer.execute(game, deal, new Check(alice));
@@ -76,6 +77,8 @@ class FullTexasHoldemDealTest {
     assertEquals(830, game.getChips(bob), "Bob should have 830 chips");
     assertEquals(2000, game.getChips(alice) + game.getChips(bob));
 
-    assertTrue(deal.getHistory().stream().anyMatch(a -> a instanceof AwardPot), "AwardPot action should be present");
+    assertTrue(
+        deal.getHistory().stream().anyMatch(a -> a instanceof AwardPot),
+        "AwardPot action should be present");
   }
 }
