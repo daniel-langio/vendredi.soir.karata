@@ -19,17 +19,17 @@ public class TexasHoldemRules implements Rules {
   public boolean isActionLegal(Game game, Deal deal, Action action) {
     if (action instanceof PlayerAction pa) {
       if (pa instanceof Bet bet) {
-        return game.getChips(bet.player()) >= bet.amount() && deal.getCurrentRoundBet() == 0;
+        return game.getChips(bet.getPlayer()) >= bet.getAmount() && deal.getCurrentRoundBet() == 0;
       }
       if (pa instanceof Raise raise) {
-        return game.getChips(raise.player()) >= raise.amount()
-            && raise.amount() >= getMinimumRaise(deal);
+        return game.getChips(raise.getPlayer()) >= raise.getAmount()
+            && raise.getAmount() >= getMinimumRaise(deal);
       }
       if (pa instanceof Call call) {
-        return game.getChips(call.player()) >= call.amount();
+        return game.getChips(call.getPlayer()) >= call.getAmount();
       }
       if (pa instanceof Check) {
-        return deal.getCurrentRoundBet() == deal.getPlayerRoundContribution(pa.player());
+        return deal.getCurrentRoundBet() == deal.getPlayerRoundContribution(pa.getPlayer());
       }
     }
     return true;
@@ -45,7 +45,7 @@ public class TexasHoldemRules implements Rules {
     Player lastActor =
         deal.getHistory().stream()
             .filter(a -> a instanceof PlayerAction)
-            .map(a -> ((PlayerAction) a).player())
+            .map(a -> ((PlayerAction) a).getPlayer())
             .reduce((first, second) -> second)
             .orElse(null);
 

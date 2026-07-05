@@ -1,10 +1,8 @@
 package vendredi.soir.karata.core.action;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.Accessors;
+import lombok.NoArgsConstructor;
 
 @Getter
-@Accessors(fluent = true)
-@RequiredArgsConstructor
+@NoArgsConstructor
 public final class Showdown implements DealerAction {}
