@@ -1,0 +1,301 @@
+openapi: 3.0.3
+info:
+  title: Poker API
+  version: 1.0.0
+  description: >-
+    A high-performance, event-sourced API for a playable poker game.
+    Uses compact card representations and incremental action logs to minimize payload size and latency.
+paths:
+  /games:
+    post:
+      summary: Create a new poker game
+      operationId: createGame
+      responses:
+        '201':
+          description: Game created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+  /games/{gameId}:
+    get:
+      summary: Get game details
+      operationId: getGame
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+  /games/{gameId}/actions:
+    get:
+      summary: Get incremental action history
+      description: Returns actions since a specific sequence number for efficient state synchronization.
+      operationId: getActions
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: since
+          in: query
+          description: Sequence number to fetch actions from (exclusive)
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of actions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Action'
+    post:
+      summary: Perform a player action
+      operationId: performAction
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlayerActionRequest'
+      responses:
+        '201':
+          description: Action recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Action'
+components:
+  schemas:
+    Game:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        players:
+          type: array
+          items:
+            $ref: '#/components/schemas/Player'
+    Player:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        initialChips:
+          type: integer
+    Card:
+      type: string
+      description: Compact card representation. Rank (2-10, J, Q, K, A) + Suit (C, D, H, S). Example 'AS', '10D'.
+      example: 'AS'
+      pattern: '^([2-9]|10|[JQKA])[CDHS]$'
+    HandCategory:
+      type: string
+      enum:
+        - HIGH_CARD
+        - ONE_PAIR
+        - TWO_PAIR
+        - THREE_OF_A_KIND
+        - STRAIGHT
+        - FLUSH
+        - FULL_HOUSE
+        - FOUR_OF_A_KIND
+        - STRAIGHT_FLUSH
+        - FIVE_OF_A_KIND
+    Action:
+      type: object
+      required:
+        - sequenceNumber
+        - type
+        - timestamp
+      properties:
+        sequenceNumber:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        type:
+          type: string
+          enum:
+            - FOLD
+            - CHECK
+            - CALL
+            - BET
+            - RAISE
+            - SMALL_BLIND
+            - BIG_BLIND
+            - SHUFFLE_DECK
+            - DEAL_HOLE_CARD
+            - REVEAL_CARDS
+            - AWARD_POT
+            - INITIALIZE_PLAYER_CHIPS
+            - SHOWDOWN
+      discriminator:
+        propertyName: type
+        mapping:
+          FOLD: '#/components/schemas/FoldAction'
+          CHECK: '#/components/schemas/CheckAction'
+          CALL: '#/components/schemas/CallAction'
+          BET: '#/components/schemas/BetAction'
+          RAISE: '#/components/schemas/RaiseAction'
+          SMALL_BLIND: '#/components/schemas/SmallBlindAction'
+          BIG_BLIND: '#/components/schemas/BigBlindAction'
+          SHUFFLE_DECK: '#/components/schemas/ShuffleDeckAction'
+          DEAL_HOLE_CARD: '#/components/schemas/DealHoleCardAction'
+          REVEAL_CARDS: '#/components/schemas/RevealCardsAction'
+          AWARD_POT: '#/components/schemas/AwardPotAction'
+          INITIALIZE_PLAYER_CHIPS: '#/components/schemas/InitializePlayerChipsAction'
+          SHOWDOWN: '#/components/schemas/ShowdownAction'
+    PlayerActionRequest:
+      type: object
+      required:
+        - type
+        - playerId
+      properties:
+        type:
+          type: string
+          enum: [FOLD, CHECK, CALL, BET, RAISE]
+        playerId:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+          description: Required for BET and RAISE
+    FoldAction:
+      allOf:
+        - $ref: '#/components/schemas/Action'
+        - type: object
+          properties:
+            playerId:
+              type: string
+              format: uuid
+    CheckAction:
+      allOf:
+        - $ref: '#/components/schemas/Action'
+        - type: object
+          properties:
+            playerId:
+              type: string
+              format: uuid
+    CallAction:
+      allOf:
+        - $ref: '#/components/schemas/Action'
+        - type: object
+          properties:
+            playerId:
+              type: string
+              format: uuid
+            amount:
+              type: integer
+    BetAction:
+      allOf:
+        - $ref: '#/components/schemas/Action'
+        - type: object
+          properties:
+            playerId:
+              type: string
+              format: uuid
+            amount:
+              type: integer
+    RaiseAction:
+      allOf:
+        - $ref: '#/components/schemas/Action'
+        - type: object
+          properties:
+            playerId:
+              type: string
+              format: uuid
+            amount:
+              type: integer
+    SmallBlindAction:
+      allOf:
+        - $ref: '#/components/schemas/Action'
+        - type: object
+          properties:
+            playerId:
+              type: string
+              format: uuid
+            amount:
+              type: integer
+    BigBlindAction:
+      allOf:
+        - $ref: '#/components/schemas/Action'
+        - type: object
+          properties:
+            playerId:
+              type: string
+              format: uuid
+            amount:
+              type: integer
+    ShuffleDeckAction:
+      allOf:
+        - $ref: '#/components/schemas/Action'
+    DealHoleCardAction:
+      allOf:
+        - $ref: '#/components/schemas/Action'
+        - type: object
+          properties:
+            playerId:
+              type: string
+              format: uuid
+            card:
+              $ref: '#/components/schemas/Card'
+    RevealCardsAction:
+      allOf:
+        - $ref: '#/components/schemas/Action'
+        - type: object
+          properties:
+            cards:
+              type: array
+              items:
+                $ref: '#/components/schemas/Card'
+    AwardPotAction:
+      allOf:
+        - $ref: '#/components/schemas/Action'
+        - type: object
+          properties:
+            playerId:
+              type: string
+              format: uuid
+            amount:
+              type: integer
+    InitializePlayerChipsAction:
+      allOf:
+        - $ref: '#/components/schemas/Action'
+        - type: object
+          properties:
+            playerId:
+              type: string
+              format: uuid
+            amount:
+              type: integer
+    ShowdownAction:
+      allOf:
+        - $ref: '#/components/schemas/Action'
