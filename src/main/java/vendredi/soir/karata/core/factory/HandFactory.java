@@ -1,14 +1,15 @@
 package vendredi.soir.karata.core.factory;
 
-import static vendredi.soir.karata.core.HandCategory.*;
+import static vendredi.soir.karata.core.entity.HandCategory.*;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
-import vendredi.soir.karata.core.Card;
-import vendredi.soir.karata.core.Deck;
-import vendredi.soir.karata.core.Hand;
-import vendredi.soir.karata.core.HandCategory;
+import vendredi.soir.karata.core.entity.Card;
+import vendredi.soir.karata.core.entity.Deck;
+import vendredi.soir.karata.core.entity.Hand;
+import vendredi.soir.karata.core.entity.HandCategory;
 
 public class HandFactory {
   public static Hand from(Deck deck) {
@@ -52,6 +53,37 @@ public class HandFactory {
     return Hand.of(type, cards);
   }
 
+  public static Hand evaluateBestHand(List<Card> cards) {
+    if (cards.size() <= 5) {
+      return from(new Deck(cards));
+    }
+
+    List<List<Card>> combinations = new ArrayList<>();
+    generateCombinations(cards, 5, 0, new ArrayList<>(), combinations);
+
+    Hand bestHand = null;
+    for (List<Card> combo : combinations) {
+      Hand currentHand = from(new Deck(combo));
+      if (bestHand == null || currentHand.compareTo(bestHand) > 0) {
+        bestHand = currentHand;
+      }
+    }
+    return bestHand;
+  }
+
+  private static void generateCombinations(
+      List<Card> cards, int k, int start, List<Card> current, List<List<Card>> result) {
+    if (current.size() == k) {
+      result.add(new ArrayList<>(current));
+      return;
+    }
+    for (int i = start; i < cards.size(); i++) {
+      current.add(cards.get(i));
+      generateCombinations(cards, k, i + 1, current, result);
+      current.remove(current.size() - 1);
+    }
+  }
+
   private static boolean isFlush(List<Card> cards) {
     return cards.stream().map(Card::suit).distinct().count() == 1;
   }
@@ -59,16 +91,14 @@ public class HandFactory {
   private static boolean isStraight(List<Card> cards) {
     var ranks =
         cards.stream()
-            .map(card -> card.rank().getChips()) // 2..14 (Ace = 14)
+            .map(card -> card.rank().getChips())
             .sorted()
             .toList();
 
-    // Duplicate ranks cannot form a straight.
     if (ranks.stream().distinct().count() != 5) {
       return false;
     }
 
-    // Wheel straight: A-2-3-4-5
     if (ranks.equals(List.of(2, 3, 4, 5, 14))) {
       return true;
     }

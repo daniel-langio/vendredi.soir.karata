@@ -1,4 +1,4 @@
-package vendredi.soir.karata.core;
+package vendredi.soir.karata.core.entity;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

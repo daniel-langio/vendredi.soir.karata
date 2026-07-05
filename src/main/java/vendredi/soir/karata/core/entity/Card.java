@@ -1,7 +1,7 @@
-package vendredi.soir.karata.core;
+package vendredi.soir.karata.core.entity;
 
-import static vendredi.soir.karata.core.Rank.*;
-import static vendredi.soir.karata.core.Suit.*;
+import static vendredi.soir.karata.core.entity.Rank.*;
+import static vendredi.soir.karata.core.entity.Suit.*;
 
 public record Card(Suit suit, Rank rank) {
   public static final Card CLUB_TWO = new Card(CLUBS, TWO);
