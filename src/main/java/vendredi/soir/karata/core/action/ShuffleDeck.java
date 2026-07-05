@@ -7,5 +7,4 @@ import lombok.experimental.Accessors;
 @Getter
 @Accessors(fluent = true)
 @RequiredArgsConstructor
-public final class ShuffleDeck implements DealerAction {
-}
+public final class ShuffleDeck implements DealerAction {}

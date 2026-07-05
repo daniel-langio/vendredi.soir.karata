@@ -22,7 +22,8 @@ public class TexasHoldemRules implements Rules {
         return game.getChips(bet.player()) >= bet.amount() && deal.getCurrentRoundBet() == 0;
       }
       if (pa instanceof Raise raise) {
-        return game.getChips(raise.player()) >= raise.amount() && raise.amount() >= getMinimumRaise(deal);
+        return game.getChips(raise.player()) >= raise.amount()
+            && raise.amount() >= getMinimumRaise(deal);
       }
       if (pa instanceof Call call) {
         return game.getChips(call.player()) >= call.amount();
@@ -36,18 +37,17 @@ public class TexasHoldemRules implements Rules {
 
   @Override
   public Player determineNextPlayer(Deal deal, List<Player> players) {
-    List<Player> active = players.stream()
-        .filter(p -> !deal.hasFolded(p))
-        .toList();
+    List<Player> active = players.stream().filter(p -> !deal.hasFolded(p)).toList();
 
     if (active.isEmpty()) return null;
 
     // Simplified turn logic: find the last player who acted and pick the next one
-    Player lastActor = deal.getHistory().stream()
-        .filter(a -> a instanceof PlayerAction)
-        .map(a -> ((PlayerAction) a).player())
-        .reduce((first, second) -> second)
-        .orElse(null);
+    Player lastActor =
+        deal.getHistory().stream()
+            .filter(a -> a instanceof PlayerAction)
+            .map(a -> ((PlayerAction) a).player())
+            .reduce((first, second) -> second)
+            .orElse(null);
 
     if (lastActor == null) return active.get(0);
 

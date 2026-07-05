@@ -1,0 +1,368 @@
+openapi: 3.0.3
+info:
+  title: Texas Hold'em Poker API
+  description: |
+    A secure API for Texas Hold'em poker, enforcing a strict split between Table Management (Games) and Deal Execution.
+  version: 1.0.0
+servers:
+  - url: /poker
+    description: Base path for the poker game
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Game:
+      type: object
+      properties:
+        gameId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        blinds:
+          $ref: '#/components/schemas/Blinds'
+        players:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerInfo'
+        dealHistory:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of historical deal IDs played at this table.
+        currentDealId:
+          type: string
+          format: uuid
+          nullable: true
+        currentDeal:
+          $ref: '#/components/schemas/DealState'
+      required:
+        - gameId
+        - blinds
+        - players
+        - dealHistory
+
+    PlayerInfo:
+      type: object
+      properties:
+        playerId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        chips:
+          type: integer
+          format: int64
+      required:
+        - playerId
+        - username
+        - chips
+
+    Blinds:
+      type: object
+      properties:
+        small:
+          type: integer
+          format: int64
+        big:
+          type: integer
+          format: int64
+      required:
+        - small
+        - big
+
+    DealState:
+      type: object
+      properties:
+        dealId:
+          type: string
+          format: uuid
+        communityCards:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommunityCard'
+          minItems: 5
+          maxItems: 5
+          description: |
+            A 5-card array representing the table deck.
+            Initiates empty (all nulls) and populates progressively as rounds transition.
+        pot:
+          type: integer
+          format: int64
+        phase:
+          $ref: '#/components/schemas/Phase'
+        activePlayerId:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+        - dealId
+        - communityCards
+        - pot
+        - phase
+
+    Card:
+      type: string
+      pattern: '^([2-9]|10|[JQKA])[cdhsCDHS]$'
+      example: 'As'
+      description: |
+        Compact card representation.
+        Rank: 2-10, J, Q, K, A.
+        Suit: c (Clubs), d (Diamonds), h (Hearts), s (Spades).
+
+    CommunityCard:
+      allOf:
+        - $ref: '#/components/schemas/Card'
+      nullable: true
+      description: A community card which can be null if not yet revealed.
+
+    Phase:
+      type: string
+      enum: [PRE_FLOP, FLOP, TURN, RIVER, SHOWDOWN]
+
+    TimelineEvent:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [PLAYER_JOINED, DEAL_STARTED, PHASE_CHANGED, ACTION_TAKEN, SHOWDOWN, POT_AWARDED]
+        timestamp:
+          type: string
+          format: date-time
+        payload:
+          type: object
+      required:
+        - type
+        - timestamp
+
+    ActionRequest:
+      type: object
+      properties:
+        actionType:
+          type: string
+          enum: [CHECK, CALL, FOLD, RAISE, BET]
+        amount:
+          type: integer
+          format: int64
+          description: Required for RAISE and BET.
+        timeoutLimit:
+          type: string
+          format: date-time
+          description: Absolute timestamp indicating the precise action timeout limit (ISO 8601).
+      required:
+        - actionType
+        - timeoutLimit
+
+    Hand:
+      type: object
+      properties:
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/Card'
+          minItems: 2
+          maxItems: 2
+      required:
+        - cards
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+        - code
+        - message
+
+security:
+  - BearerAuth: []
+
+paths:
+  /games:
+    post:
+      summary: Create a new game table
+      tags: [Game Infrastructure]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                blinds:
+                  $ref: '#/components/schemas/Blinds'
+              required:
+                - name
+                - blinds
+      responses:
+        '201':
+          description: Game created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /games/{gameId}:
+    get:
+      summary: Get game details
+      tags: [Game Infrastructure]
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Game details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '404':
+          description: Game not found
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /games/{gameId}/players:
+    post:
+      summary: Register/Buy-in a player to the game
+      tags: [Game Infrastructure]
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                buyInAmount:
+                  type: integer
+                  format: int64
+              required:
+                - buyInAmount
+      responses:
+        '204':
+          description: Player registered successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /games/{gameId}/events:
+    get:
+      summary: Stream of timeline events for the game
+      tags: [Game Infrastructure]
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: SSE stream of TimelineEvents
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/TimelineEvent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /deals/{dealId}/actions:
+    post:
+      summary: Take a gameplay action
+      tags: [Deal Execution]
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActionRequest'
+      responses:
+        '204':
+          description: Action accepted
+        '400':
+          description: Illegal move or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Acting out of turn or unauthorized access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /deals/{dealId}/hand/me:
+    get:
+      summary: Fetch the calling player's private cards
+      tags: [Deal Execution]
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The player's hand
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hand'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Unauthorized hand access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+responses:
+  BadRequest:
+    description: Bad Request
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/Error'
+  Unauthorized:
+    description: Unauthorized
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/Error'

@@ -47,13 +47,15 @@ public class Hand implements Comparable<Hand> {
       return List.of(ranks.get(ranks.size() - 1));
     }
 
-    Map<Rank, Long> counts = cards.stream()
-        .collect(Collectors.groupingBy(Card::rank, Collectors.counting()));
+    Map<Rank, Long> counts =
+        cards.stream().collect(Collectors.groupingBy(Card::rank, Collectors.counting()));
 
     return cards.stream()
         .map(Card::rank)
-        .sorted(Comparator.<Rank, Long>comparing(counts::get).reversed()
-            .thenComparing(Comparator.comparing(Rank::getChips).reversed()))
+        .sorted(
+            Comparator.<Rank, Long>comparing(counts::get)
+                .reversed()
+                .thenComparing(Comparator.comparing(Rank::getChips).reversed()))
         .map(Rank::getChips)
         .toList();
   }
