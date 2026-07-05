@@ -8,6 +8,9 @@ This file defines the strict architectural and operational rules for this reposi
     *   **Zero Framework Dependencies:** Do not import Spring, JPA, Hibernate, or any other external infrastructure frameworks inside this package. It must rely solely on standard Java libraries.
     *   **Domain Isolation:** All core business rules, domain entities, and pure logic reside here, ensuring the application's *métier* remains highly testable and completely decoupled from technical implementation details.
 
+*   **Core Logic Modifications:** Agents are permitted to modify existing core domain logic *only if absolutely required* to fulfill feature constraints.
+    *   **Mandatory Documentation:** If any change is made to the core business logic layer, the agent **must** immediately document the changes, invariants, and side-effects in the corresponding markdown files inside the `docs/` directory.
+
 *   **Strict Responsibility Separation:** Maintain clean boundaries across all layers.
     *   **Controllers:** Handle HTTP routing, input validation, and request/response mapping only. No business logic.
     *   **Services / Infrastructure:** Bridge the pure Java `core` logic with external frameworks, managing transactions, persistence, and external APIs.
@@ -24,6 +27,3 @@ This file defines the strict architectural and operational rules for this reposi
 *   **Conventional Commits:** All commit messages and Pull Request titles must strictly follow the Conventional Commits specification.
     *   *Format:* `<type>(<scope>): <description>`
     *   *Allowed Types:* `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
-    *   *Examples:*
-        *   `feat(controller): add endpoints for financial asset simulation`
-        *   `fix(jpa): resolve mapping mismatch on entity relationships`
