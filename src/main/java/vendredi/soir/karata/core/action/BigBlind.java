@@ -1,11 +1,11 @@
 package vendredi.soir.karata.core.action;
 
 import lombok.Getter;
-import lombok.experimental.Accessors;
+import lombok.NoArgsConstructor;
 import vendredi.soir.karata.core.entity.Player;
 
 @Getter
-@Accessors(fluent = true)
+@NoArgsConstructor(force = true)
 public final class BigBlind implements PlayerAction {
   private final Player player;
   private final long amount;
