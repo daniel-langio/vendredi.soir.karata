@@ -44,25 +44,28 @@ public class Game {
 
   public long getChips(Player player) {
     long chips = 0;
-    chips += history.stream()
+    chips +=
+        history.stream()
             .filter(a -> a instanceof InitializePlayerChips ipc && ipc.getPlayer().equals(player))
             .mapToLong(a -> ((InitializePlayerChips) a).getAmount())
             .sum();
     for (Deal deal : deals) {
-      chips += deal.getHistory().stream()
-              .mapToLong(a -> {
-                if (a instanceof PlayerAction pa && pa.getPlayer().equals(player)) {
-                  if (a instanceof Bet bet) return -bet.getAmount();
-                  if (a instanceof Raise raise) return -raise.getAmount();
-                  if (a instanceof Call call) return -call.getAmount();
-                  if (a instanceof SmallBlind sb) return -sb.getAmount();
-                  if (a instanceof BigBlind bb) return -bb.getAmount();
-                }
-                if (a instanceof AwardPot ap && ap.getWinner().equals(player)) {
-                  return ap.getAmount();
-                }
-                return 0L;
-              })
+      chips +=
+          deal.getHistory().stream()
+              .mapToLong(
+                  a -> {
+                    if (a instanceof PlayerAction pa && pa.getPlayer().equals(player)) {
+                      if (a instanceof Bet bet) return -bet.getAmount();
+                      if (a instanceof Raise raise) return -raise.getAmount();
+                      if (a instanceof Call call) return -call.getAmount();
+                      if (a instanceof SmallBlind sb) return -sb.getAmount();
+                      if (a instanceof BigBlind bb) return -bb.getAmount();
+                    }
+                    if (a instanceof AwardPot ap && ap.getWinner().equals(player)) {
+                      return ap.getAmount();
+                    }
+                    return 0L;
+                  })
               .sum();
     }
     return chips;
