@@ -50,29 +50,6 @@ class PokerGameTest {
     dealService = new DealService(gameService);
   }
 
-  @org.junit.jupiter.api.Test
-  void debug_jackson_roundtrip() throws Exception {
-    ObjectMapper om = new ObjectMapper();
-    om.registerModule(new JavaTimeModule());
-    om.registerModule(new ParameterNamesModule());
-    vendredi.soir.karata.core.action.InitializePlayerChips original =
-        new vendredi.soir.karata.core.action.InitializePlayerChips(
-            new vendredi.soir.karata.core.entity.Player("Alice"), 100_000L);
-    String json = om.writeValueAsString(original);
-    System.out.println("[DEBUG] serialized json=" + json);
-    vendredi.soir.karata.core.action.InitializePlayerChips roundTripped =
-        om.readValue(json, vendredi.soir.karata.core.action.InitializePlayerChips.class);
-    System.out.println(
-        "[DEBUG] roundtripped player="
-            + roundTripped.getPlayer()
-            + " name="
-            + (roundTripped.getPlayer() == null
-                ? "NULL_PLAYER"
-                : roundTripped.getPlayer().getName())
-            + " amount="
-            + roundTripped.getAmount());
-  }
-
   @Test
   void simulate_complete_game() {
     UUID gameId = UUID.randomUUID();
