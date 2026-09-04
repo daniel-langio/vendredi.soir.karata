@@ -11,7 +11,11 @@ cd "$(dirname "$0")/.."
 echo "Building web-ui..."
 cd web-ui
 flutter pub get
-flutter build web --release
+# --pwa-strategy=none: this is a live-polling multiplayer app, not something that benefits from
+# offline support, and Flutter's default service worker caches the app shell aggressively enough
+# that a fresh deploy needs a second manual reload before the browser stops serving the old one -
+# disabling it means every load fetches the current build.
+flutter build web --release --pwa-strategy=none
 cd ..
 
 echo "Copying build output into src/main/resources/static..."
