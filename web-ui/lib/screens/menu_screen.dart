@@ -2,10 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
-import 'new_table_screen.dart';
-import 'join_table_screen.dart';
-import 'table_screen.dart';
-import 'welcome_screen.dart';
 
 class RecentTable {
   final String gameId;
@@ -58,50 +54,26 @@ class _MenuScreenState extends State<MenuScreen> {
     await prefs.remove('jwt_token');
     await prefs.remove('username');
     if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const WelcomeScreen()),
-      );
+      Navigator.of(context).pushReplacementNamed('/');
     }
   }
 
+  Map<String, dynamic> get _sessionArgs =>
+      {'serverUrl': widget.serverUrl, 'token': widget.token, 'username': widget.username};
+
   void _openTable(String gameId) {
     Navigator.of(context)
-        .push(
-          MaterialPageRoute(
-            builder: (context) => TableScreen(
-              serverUrl: widget.serverUrl,
-              token: widget.token,
-              username: widget.username,
-              gameId: gameId,
-            ),
-          ),
-        )
+        .pushNamed('/table/$gameId', arguments: _sessionArgs)
         .then((_) => _loadRecent());
   }
 
   Future<void> _createTable() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => NewTableScreen(
-          serverUrl: widget.serverUrl,
-          token: widget.token,
-          username: widget.username,
-        ),
-      ),
-    );
+    await Navigator.of(context).pushNamed('/new-table', arguments: _sessionArgs);
     _loadRecent();
   }
 
   Future<void> _joinTable() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => JoinTableScreen(
-          serverUrl: widget.serverUrl,
-          token: widget.token,
-          username: widget.username,
-        ),
-      ),
-    );
+    await Navigator.of(context).pushNamed('/join-table', arguments: _sessionArgs);
     _loadRecent();
   }
 

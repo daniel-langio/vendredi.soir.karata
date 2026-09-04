@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../theme.dart';
 import 'menu_screen.dart';
-import 'table_screen.dart';
 
 final _uuidPattern = RegExp(
     r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}');
@@ -91,15 +90,13 @@ class _JoinTableScreenState extends State<JoinTableScreen> {
       await saveRecentTable(gameId, _preview!['name'] as String? ?? 'Table');
 
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => TableScreen(
-              serverUrl: widget.serverUrl,
-              token: widget.token,
-              username: widget.username,
-              gameId: gameId,
-            ),
-          ),
+        Navigator.of(context).pushReplacementNamed(
+          '/table/$gameId',
+          arguments: {
+            'serverUrl': widget.serverUrl,
+            'token': widget.token,
+            'username': widget.username,
+          },
         );
       }
     } catch (e) {

@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/welcome_screen.dart';
+import 'screens/register_screen.dart';
+import 'screens/login_screen.dart';
 import 'screens/menu_screen.dart';
+import 'screens/new_table_screen.dart';
+import 'screens/join_table_screen.dart';
+import 'screens/table_screen.dart';
 import 'theme.dart';
 
 void main() {
+  // Drop the "#" from URLs (e.g. karata.example.com/table/<id> instead of
+  // karata.example.com/#/table/<id>) so paths look like normal web app paths.
+  usePathUrlStrategy();
   runApp(const MyApp());
 }
 
@@ -17,8 +26,113 @@ class MyApp extends StatelessWidget {
       title: 'Karata',
       debugShowCheckedModeBanner: false,
       theme: karataTheme(),
-      home: const RootScreen(),
+      onGenerateRoute: _onGenerateRoute,
     );
+  }
+}
+
+/// Session data a screen needs, either handed down via route arguments during
+/// normal in-app navigation, or reloaded from shared_preferences when the
+/// route is entered directly (a deep link, or a browser refresh).
+class _Session {
+  final String serverUrl;
+  final String token;
+  final String username;
+  const _Session({required this.serverUrl, required this.token, required this.username});
+
+  static _Session? fromArguments(Object? arguments) {
+    if (arguments is! Map) return null;
+    final serverUrl = arguments['serverUrl'];
+    final token = arguments['token'];
+    final username = arguments['username'];
+    if (serverUrl is! String || token is! String || username is! String) return null;
+    return _Session(serverUrl: serverUrl, token: token, username: username);
+  }
+}
+
+Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
+  final uri = Uri.parse(settings.name ?? '/');
+  final segments = uri.pathSegments;
+  final session = _Session.fromArguments(settings.arguments);
+
+  Widget page;
+  if (segments.isEmpty) {
+    page = const RootScreen();
+  } else if (segments.length == 1 && segments[0] == 'register') {
+    final args = settings.arguments as Map?;
+    page = RegisterScreen(serverUrl: (args?['serverUrl'] as String?) ?? defaultServerUrl());
+  } else if (segments.length == 1 && segments[0] == 'login') {
+    final args = settings.arguments as Map?;
+    page = LoginScreen(serverUrl: (args?['serverUrl'] as String?) ?? defaultServerUrl());
+  } else if (segments.length == 1 && segments[0] == 'menu') {
+    page = session == null
+        ? const RootScreen()
+        : MenuScreen(serverUrl: session.serverUrl, token: session.token, username: session.username);
+  } else if (segments.length == 1 && segments[0] == 'new-table') {
+    page = session == null
+        ? const RootScreen()
+        : NewTableScreen(
+            serverUrl: session.serverUrl, token: session.token, username: session.username);
+  } else if (segments.length == 1 && segments[0] == 'join-table') {
+    page = session == null
+        ? const RootScreen()
+        : JoinTableScreen(
+            serverUrl: session.serverUrl, token: session.token, username: session.username);
+  } else if (segments.length == 2 && segments[0] == 'table') {
+    final gameId = segments[1];
+    page = session == null
+        ? _TableRouteLoader(gameId: gameId)
+        : TableScreen(
+            serverUrl: session.serverUrl,
+            token: session.token,
+            username: session.username,
+            gameId: gameId,
+          );
+  } else {
+    page = const RootScreen();
+  }
+
+  return MaterialPageRoute(settings: settings, builder: (context) => page);
+}
+
+/// Loads a saved session before entering a table reached directly (a deep
+/// link someone was sent, or a browser refresh) rather than via in-app
+/// navigation, where the session would already be in the route's arguments.
+class _TableRouteLoader extends StatefulWidget {
+  final String gameId;
+  const _TableRouteLoader({required this.gameId});
+
+  @override
+  State<_TableRouteLoader> createState() => _TableRouteLoaderState();
+}
+
+class _TableRouteLoaderState extends State<_TableRouteLoader> {
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final serverUrl = prefs.getString('server_url');
+    final token = prefs.getString('jwt_token');
+    final username = prefs.getString('username');
+    if (!mounted) return;
+
+    if (serverUrl != null && serverUrl.isNotEmpty && token != null && token.isNotEmpty && username != null) {
+      Navigator.of(context).pushReplacementNamed(
+        '/table/${widget.gameId}',
+        arguments: {'serverUrl': serverUrl, 'token': token, 'username': username},
+      );
+    } else {
+      Navigator.of(context).pushReplacementNamed('/');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }
 
@@ -31,6 +145,9 @@ class RootScreen extends StatefulWidget {
 }
 
 class _RootScreenState extends State<RootScreen> {
+  bool _hasSession = false;
+  bool _checked = false;
+
   @override
   void initState() {
     super.initState();
@@ -46,22 +163,21 @@ class _RootScreenState extends State<RootScreen> {
     if (!mounted) return;
 
     if (serverUrl != null && serverUrl.isNotEmpty && token != null && token.isNotEmpty && username != null) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => MenuScreen(serverUrl: serverUrl, token: token, username: username),
-        ),
+      setState(() => _hasSession = true);
+      Navigator.of(context).pushReplacementNamed(
+        '/menu',
+        arguments: {'serverUrl': serverUrl, 'token': token, 'username': username},
       );
     } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const WelcomeScreen()),
-      );
+      setState(() => _checked = true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
+    if (_hasSession || !_checked) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    return const WelcomeScreen();
   }
 }

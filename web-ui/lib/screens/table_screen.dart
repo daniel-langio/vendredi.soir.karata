@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../api/api_client.dart';
@@ -146,10 +147,14 @@ class _TableScreenState extends State<TableScreen> {
   }
 
   Future<void> _copyInvite() async {
-    await Clipboard.setData(ClipboardData(text: widget.gameId));
+    // On web this is a real clickable link (the app has proper per-page paths - see
+    // main.dart's routing); a native build has no meaningful "origin" to build one from,
+    // so it falls back to the bare table ID, which the join-table screen also accepts.
+    final invite = kIsWeb ? '${Uri.base.origin}/table/${widget.gameId}' : widget.gameId;
+    await Clipboard.setData(ClipboardData(text: invite));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Table ID copied — send it to whoever you want to invite')),
+      const SnackBar(content: Text('Invite copied — send it to whoever you want to invite')),
     );
   }
 

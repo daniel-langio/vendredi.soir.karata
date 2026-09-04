@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../theme.dart';
 import 'menu_screen.dart';
-import 'table_screen.dart';
 
 class NewTableScreen extends StatefulWidget {
   final String serverUrl;
@@ -58,15 +57,13 @@ class _NewTableScreenState extends State<NewTableScreen> {
       await saveRecentTable(gameId, name);
 
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => TableScreen(
-              serverUrl: widget.serverUrl,
-              token: widget.token,
-              username: widget.username,
-              gameId: gameId,
-            ),
-          ),
+        Navigator.of(context).pushReplacementNamed(
+          '/table/$gameId',
+          arguments: {
+            'serverUrl': widget.serverUrl,
+            'token': widget.token,
+            'username': widget.username,
+          },
         );
       }
     } catch (e) {

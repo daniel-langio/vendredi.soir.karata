@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../theme.dart';
-import 'login_screen.dart';
-import 'register_screen.dart';
 
 const kDefaultServerUrl =
     'https://62zx5a4vo6n3zjykzu7dx3a4zy0imiwo.lambda-url.eu-west-3.on.aws/poker';
@@ -11,7 +9,7 @@ const kDefaultServerUrl =
 /// intended deployment for the web build - see web-ui/README.md), same-origin
 /// requests need no CORS at all, so default to wherever this page itself was
 /// loaded from rather than the hardcoded Lambda URL used by the native builds.
-String _defaultServerUrl() {
+String defaultServerUrl() {
   if (kIsWeb) {
     return '${Uri.base.origin}/poker';
   }
@@ -26,7 +24,7 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen> {
-  final _urlController = TextEditingController(text: _defaultServerUrl());
+  final _urlController = TextEditingController(text: defaultServerUrl());
   bool _showServerField = false;
 
   @override
@@ -37,16 +35,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   void _goToRegister() {
     final serverUrl = _urlController.text.trim();
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => RegisterScreen(serverUrl: serverUrl)),
-    );
+    Navigator.of(context).pushNamed('/register', arguments: {'serverUrl': serverUrl});
   }
 
   void _goToLogin() {
     final serverUrl = _urlController.text.trim();
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => LoginScreen(serverUrl: serverUrl)),
-    );
+    Navigator.of(context).pushNamed('/login', arguments: {'serverUrl': serverUrl});
   }
 
   @override
