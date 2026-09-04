@@ -98,6 +98,7 @@ public class DealService {
     UUID did = UUID.randomUUID();
     g.setCurrentDealId(did);
 
+    d.getDeck().shuffle();
     Action shuffle = new ShuffleDeck(d.getDeck().getCards());
     g.getDealer().execute(g, d, shuffle);
     gs.saveAction(gid, did, shuffle);
