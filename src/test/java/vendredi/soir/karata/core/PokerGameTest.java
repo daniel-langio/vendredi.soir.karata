@@ -71,9 +71,8 @@ class PokerGameTest {
               return pe;
             });
 
-    gameService.joinGame(gameId, "Alice", 100_000L);
-    gameService.joinGame(gameId, "Bob", 100_000L);
-
+    // Must be wired before joinGame is called: GameService.joinGame persists an
+    // InitializePlayerChips action immediately, and an unstubbed mock silently drops it.
     List<ActionEntity> history = new ArrayList<>();
     when(actionRepository.findByGameIdOrderByActionOrderAsc(gameId)).thenReturn(history);
     when(actionRepository.save(any()))
@@ -83,6 +82,9 @@ class PokerGameTest {
               history.add(ae);
               return ae;
             });
+
+    gameService.joinGame(gameId, "Alice", 100_000L);
+    gameService.joinGame(gameId, "Bob", 100_000L);
 
     for (int i = 0; i < 4; i++) {
       dealService.startDeal(gameId);

@@ -87,23 +87,6 @@ public class DealService {
     GameEntity ge = gs.lockGame(gid);
     Game g = gs.getGame(gid);
 
-    System.out.println(
-        "[DEBUG] players="
-            + g.getPlayers().stream().map(p -> "'" + p.getName() + "'=" + g.getChips(p)).toList()
-            + " initActions="
-            + g.getHistory().stream()
-                .filter(a -> a instanceof InitializePlayerChips)
-                .map(
-                    a -> {
-                      InitializePlayerChips ipc = (InitializePlayerChips) a;
-                      return "player="
-                          + ipc.getPlayer()
-                          + " name="
-                          + (ipc.getPlayer() == null ? "NULL" : ipc.getPlayer().getName())
-                          + " amount="
-                          + ipc.getAmount();
-                    })
-                .toList());
     List<Player> eligible = g.getPlayers().stream().filter(p -> g.getChips(p) > 0).toList();
     if (eligible.size() < 2) {
       throw new BadRequestException("At least 2 players with chips are required to start a deal");
