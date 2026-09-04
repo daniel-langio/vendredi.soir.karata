@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -151,10 +152,32 @@ class FullGamePlaythroughIT extends FacadeIT {
     return resp.getBody();
   }
 
+  private final Map<String, String> tokenCache = new HashMap<>();
+  private static final String TEST_PASSWORD = "test-password-123";
+
   private <T> HttpEntity<T> authorized(String username, T body) {
     HttpHeaders headers = new HttpHeaders();
-    headers.set("Authorization", "Bearer " + username);
+    headers.set("Authorization", "Bearer " + tokenFor(username));
     return new HttpEntity<>(body, headers);
+  }
+
+  private String tokenFor(String username) {
+    return tokenCache.computeIfAbsent(
+        username,
+        u -> {
+          Map<String, Object> credentials = Map.of("username", u, "password", TEST_PASSWORD);
+          ResponseEntity<Map> registerResp =
+              rest.postForEntity("/poker/auth/register", credentials, Map.class);
+          if (registerResp.getStatusCode() == HttpStatus.CREATED) {
+            return (String) registerResp.getBody().get("token");
+          }
+          // Already registered (e.g. re-run against the same shared Testcontainers Postgres).
+          ResponseEntity<Map> loginResp =
+              rest.postForEntity("/poker/auth/login", credentials, Map.class);
+          assertEquals(
+              HttpStatus.OK, loginResp.getStatusCode(), "could not obtain a token for " + u);
+          return (String) loginResp.getBody().get("token");
+        });
   }
 
   private static long chipsOf(Game game, String username) {

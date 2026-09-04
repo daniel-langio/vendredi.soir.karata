@@ -45,6 +45,11 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Error("NOT_FOUND", e.getMessage()));
   }
 
+  @ExceptionHandler(ConflictException.class)
+  public ResponseEntity<Error> handleConflict(ConflictException e) {
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(new Error("CONFLICT", e.getMessage()));
+  }
+
   @ExceptionHandler(NoSuchElementException.class)
   public ResponseEntity<Error> handleNoSuchElement(NoSuchElementException e) {
     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Error("NOT_FOUND", e.getMessage()));
