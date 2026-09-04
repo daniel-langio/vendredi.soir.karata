@@ -28,7 +28,22 @@ public class Dealer {
   }
 
   private void handleShowdown(Game game, Deal deal) {
+    System.out.println(
+        "[DEBUG handleShowdown] board="
+            + deal.getBoard()
+            + " players="
+            + game.getPlayers().stream()
+                .map(
+                    p ->
+                        p.getName()
+                            + "(folded="
+                            + deal.hasFolded(p)
+                            + ", hole="
+                            + deal.getHoleCards(p)
+                            + ")")
+                .toList());
     Map<Player, Hand> winners = rules.evaluateWinners(deal, game.getPlayers());
+    System.out.println("[DEBUG handleShowdown] winners=" + winners);
     if (winners.isEmpty()) {
       return;
     }
