@@ -38,7 +38,8 @@ public class PokerController {
     ds.enforceTurnTimeout(gid);
     vendredi.soir.karata.core.entity.Game g = gs.getGame(gid);
     UUID currentDealId = g.getCurrentDealId();
-    Instant turnDeadline = currentDealId != null ? ds.currentTurnDeadline(gid, currentDealId) : null;
+    Instant turnDeadline =
+        currentDealId != null ? ds.currentTurnDeadline(gid, currentDealId) : null;
     return rm.toRest(g, gr.findById(gid).orElseThrow(), username, turnDeadline);
   }
 

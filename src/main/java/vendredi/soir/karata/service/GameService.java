@@ -104,7 +104,9 @@ public class GameService {
 
   @Transactional(readOnly = true)
   public Optional<Instant> getLastActionTimestamp(UUID did) {
-    return actionRepository.findTopByDealIdOrderByActionOrderDesc(did).map(ActionEntity::getTimestamp);
+    return actionRepository
+        .findTopByDealIdOrderByActionOrderDesc(did)
+        .map(ActionEntity::getTimestamp);
   }
 
   @Transactional(readOnly = true)

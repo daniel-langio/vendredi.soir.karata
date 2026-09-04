@@ -21,8 +21,8 @@ public class DealService {
 
   /**
    * The deadline for the player currently on the clock to act, derived from the timestamp of the
-   * last persisted action on this deal (there is always at least one - the deal's shuffle). Null
-   * if the deal has no active player (e.g. past showdown).
+   * last persisted action on this deal (there is always at least one - the deal's shuffle). Null if
+   * the deal has no active player (e.g. past showdown).
    */
   public Instant currentTurnDeadline(UUID gid, UUID did) {
     Game g = gs.getGame(gid);

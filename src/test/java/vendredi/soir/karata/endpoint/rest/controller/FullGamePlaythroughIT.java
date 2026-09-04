@@ -112,8 +112,7 @@ class FullGamePlaythroughIT extends FacadeIT {
         .forEach(w -> assertNotNull(w.handRank(), "a real showdown must reveal a hand rank"));
 
     // Once the hand is over, no further action should be accepted.
-    HttpEntity<ActionRequest> lateAction =
-        authorized("alice", new ActionRequest("CHECK", null));
+    HttpEntity<ActionRequest> lateAction = authorized("alice", new ActionRequest("CHECK", null));
     ResponseEntity<Void> rejected =
         rest.postForEntity("/poker/deals/" + dealId + "/actions", lateAction, Void.class);
     assertEquals(
@@ -161,8 +160,7 @@ class FullGamePlaythroughIT extends FacadeIT {
   }
 
   private void action(UUID dealId, String username, String actionType, Long amount) {
-    HttpEntity<ActionRequest> req =
-        authorized(username, new ActionRequest(actionType, amount));
+    HttpEntity<ActionRequest> req = authorized(username, new ActionRequest(actionType, amount));
     ResponseEntity<String> resp =
         rest.postForEntity("/poker/deals/" + dealId + "/actions", req, String.class);
     assertEquals(
