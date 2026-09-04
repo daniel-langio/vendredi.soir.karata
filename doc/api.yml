@@ -270,6 +270,32 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /games/{gameId}/deals:
+    post:
+      summary: Start a new deal at the table
+      description: |
+        Shuffles the deck, automatically posts the small and big blind, and deals two hole
+        cards to each player with chips. Requires at least 2 players with chips to start.
+      tags: [Game Infrastructure]
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: Deal started; returns the updated game state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /games/{gameId}/events:
     get:
       summary: Stream of timeline events for the game
