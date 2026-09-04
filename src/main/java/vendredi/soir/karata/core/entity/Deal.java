@@ -37,6 +37,16 @@ public class Deal {
     return game.getChips(player) == 0;
   }
 
+  public boolean isSmallBlind(Player player) {
+    return history.stream()
+        .anyMatch(a -> a instanceof SmallBlind sb && sb.getPlayer().equals(player));
+  }
+
+  public boolean isBigBlind(Player player) {
+    return history.stream()
+        .anyMatch(a -> a instanceof BigBlind bb && bb.getPlayer().equals(player));
+  }
+
   public long getContribution(Player player) {
     return history.stream()
         .filter(a -> a instanceof PlayerAction pa && pa.getPlayer().equals(player))

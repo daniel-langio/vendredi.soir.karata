@@ -10,4 +10,5 @@ public record Game(
     List<PlayerInfo> players,
     List<UUID> dealHistory,
     UUID currentDealId,
-    DealState currentDeal) {}
+    DealState currentDeal,
+    YouState you) {}

@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import vendredi.soir.karata.conf.FacadeIT;
 import vendredi.soir.karata.endpoint.rest.model.ActionRequest;
+import vendredi.soir.karata.endpoint.rest.model.BlindRole;
 import vendredi.soir.karata.endpoint.rest.model.Game;
 import vendredi.soir.karata.endpoint.rest.model.Hand;
 import vendredi.soir.karata.endpoint.rest.model.Phase;
@@ -49,6 +50,18 @@ class FullGamePlaythroughIT extends FacadeIT {
     assertEquals(Phase.PRE_FLOP, started.currentDeal().phase());
     assertEquals(990L, chipsOf(started, "alice"), "alice should have posted the small blind");
     assertEquals(980L, chipsOf(started, "bob"), "bob should have posted the big blind");
+    assertEquals(BlindRole.SMALL, playerInfo(started, "alice").blind());
+    assertEquals(BlindRole.BIG, playerInfo(started, "bob").blind());
+    assertEquals(10L, playerInfo(started, "alice").contributionThisRound());
+    assertEquals(20L, playerInfo(started, "bob").contributionThisRound());
+    assertEquals(20L, started.currentDeal().currentRoundBet());
+
+    // The you block is personalized per caller: alice owes 10 to call, min-raise is 40
+    // (max(20, currentRoundBet*2)), and her max raise is her current stack.
+    Game startedAsAlice = getGameAs(gameId, "alice");
+    assertEquals(10L, startedAsAlice.you().callAmount());
+    assertEquals(40L, startedAsAlice.you().minRaise());
+    assertEquals(990L, startedAsAlice.you().maxRaise());
 
     assertEquals(2, hand(dealId, "alice").cards().size(), "alice should have 2 hole cards");
     assertEquals(2, hand(dealId, "bob").cards().size(), "bob should have 2 hole cards");
@@ -89,6 +102,16 @@ class FullGamePlaythroughIT extends FacadeIT {
     long totalChips = finalGame.players().stream().mapToLong(PlayerInfo::chips).sum();
     assertEquals(2000L, totalChips, "no chips should be created or destroyed by the hand");
 
+    // A real showdown (nobody folded) must report winner(s), amount, and a hand-rank description.
+    var outcome = finalGame.currentDeal().outcome();
+    assertNotNull(outcome, "a concluded showdown should report an outcome");
+    assertFalse(outcome.winners().isEmpty());
+    long totalAwarded = outcome.winners().stream().mapToLong(w -> w.amount()).sum();
+    assertEquals(40L, totalAwarded, "the full 40-chip pot should be awarded");
+    outcome
+        .winners()
+        .forEach(w -> assertNotNull(w.handRank(), "a real showdown must reveal a hand rank"));
+
     // Once the hand is over, no further action should be accepted.
     HttpEntity<ActionRequest> lateAction =
         authorized("alice", new ActionRequest("CHECK", null, Instant.now().plusSeconds(60)));
@@ -126,6 +149,14 @@ class FullGamePlaythroughIT extends FacadeIT {
 
   private Game getGame(UUID gameId) {
     ResponseEntity<Game> resp = rest.getForEntity("/poker/games/" + gameId, Game.class);
+    assertEquals(HttpStatus.OK, resp.getStatusCode());
+    return resp.getBody();
+  }
+
+  private Game getGameAs(UUID gameId, String username) {
+    ResponseEntity<Game> resp =
+        rest.exchange(
+            "/poker/games/" + gameId, HttpMethod.GET, authorized(username, null), Game.class);
     assertEquals(HttpStatus.OK, resp.getStatusCode());
     return resp.getBody();
   }
@@ -181,11 +212,14 @@ class FullGamePlaythroughIT extends FacadeIT {
   }
 
   private static long chipsOf(Game game, String username) {
+    return playerInfo(game, username).chips();
+  }
+
+  private static PlayerInfo playerInfo(Game game, String username) {
     return game.players().stream()
         .filter(p -> p.username().equals(username))
         .findFirst()
-        .orElseThrow()
-        .chips();
+        .orElseThrow();
   }
 
   private static int communityCardCount(Game game) {

@@ -26,12 +26,15 @@ public class PokerController {
   public Game create(@RequestBody CreateGameRequest r) {
     validateCreateGame(r);
     GameEntity ge = gs.createGame(r.name(), r.blinds().small(), r.blinds().big());
-    return rm.toRest(gs.getGame(ge.getId()), ge);
+    return rm.toRest(gs.getGame(ge.getId()), ge, null);
   }
 
   @GetMapping("/games/{gid}")
-  public Game get(@PathVariable UUID gid) {
-    return rm.toRest(gs.getGame(gid), gr.findById(gid).orElseThrow());
+  public Game get(
+      @PathVariable UUID gid,
+      @RequestHeader(value = "Authorization", required = false) String authHeader) {
+    String username = authHeader != null ? jwtService.validateAndExtractUsername(authHeader) : null;
+    return rm.toRest(gs.getGame(gid), gr.findById(gid).orElseThrow(), username);
   }
 
   @PostMapping("/games/{gid}/players")
@@ -47,9 +50,11 @@ public class PokerController {
 
   @PostMapping("/games/{gid}/deals")
   @ResponseStatus(HttpStatus.CREATED)
-  public Game start(@PathVariable UUID gid) {
+  public Game start(
+      @PathVariable UUID gid,
+      @RequestHeader(value = "Authorization", required = false) String authHeader) {
     ds.startDeal(gid);
-    return get(gid);
+    return get(gid, authHeader);
   }
 
   @PostMapping("/deals/{did}/actions")
