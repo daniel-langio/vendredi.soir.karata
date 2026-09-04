@@ -85,6 +85,18 @@ jobs:
           echo "to_upload_filename=$(echo $response | jq -r '.filename')" >> $GITHUB_ENV
           curl -X GET -o template.yml "$(echo $response | jq -r '.build_template_file_uri')"
 
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.2'
+          channel: 'stable'
+          cache: true
+
+      - name: Build Web UI
+        run: |
+          chmod +x .shell/build_web_ui.sh
+          .shell/build_web_ui.sh
+
       - name: Build project
         run: sam build
 
