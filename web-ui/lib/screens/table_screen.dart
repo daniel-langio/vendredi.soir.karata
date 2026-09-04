@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../api/api_client.dart';
 import '../theme.dart';
 
@@ -154,6 +155,14 @@ class _TableScreenState extends State<TableScreen> {
     );
   }
 
+  Future<void> _copyInvite() async {
+    await Clipboard.setData(ClipboardData(text: widget.gameId));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Table ID copied — send it to whoever you want to invite')),
+    );
+  }
+
   void _openSizer(String type) {
     final you = _you;
     final minRaise = (you?['minRaise'] as num?)?.toInt() ?? 20;
@@ -180,6 +189,11 @@ class _TableScreenState extends State<TableScreen> {
       appBar: AppBar(
         title: Text(gameName),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.ios_share, size: 20),
+            tooltip: 'Copy invite',
+            onPressed: _copyInvite,
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Center(
