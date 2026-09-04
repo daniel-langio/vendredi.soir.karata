@@ -1,5 +1,6 @@
 package vendredi.soir.karata.endpoint.rest.mapper;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
@@ -18,6 +19,7 @@ public class RestMapper {
     PlayerStatus status = PlayerStatus.ACTIVE;
     long contribution = 0L;
     BlindRole blind = null;
+    String lastAction = null;
     if (deal != null) {
       if (deal.hasFolded(player)) {
         status = PlayerStatus.FOLDED;
@@ -30,6 +32,7 @@ public class RestMapper {
       } else if (deal.isBigBlind(player)) {
         blind = BlindRole.BIG;
       }
+      lastAction = deal.getLastActionDescription(player);
     }
     return new PlayerInfo(
         UUID.nameUUIDFromBytes(player.getName().getBytes()),
@@ -37,10 +40,12 @@ public class RestMapper {
         game.getChips(player),
         status,
         contribution,
-        blind);
+        blind,
+        lastAction);
   }
 
-  public DealState toRest(Deal deal, UUID dealId, vendredi.soir.karata.core.entity.Game game) {
+  public DealState toRest(
+      Deal deal, UUID dealId, vendredi.soir.karata.core.entity.Game game, Instant turnDeadline) {
     if (deal == null) return null;
     List<String> communityCards = new ArrayList<>(5);
     for (int i = 0; i < 5; i++)
@@ -53,11 +58,15 @@ public class RestMapper {
         Phase.valueOf(deal.getCurrentPhase()),
         activePlayer != null ? UUID.nameUUIDFromBytes(activePlayer.getName().getBytes()) : null,
         deal.getCurrentRoundBet(),
-        outcome(deal, game));
+        outcome(deal, game),
+        activePlayer != null ? turnDeadline : null);
   }
 
   public Game toRest(
-      vendredi.soir.karata.core.entity.Game game, GameEntity entity, String requestingUsername) {
+      vendredi.soir.karata.core.entity.Game game,
+      GameEntity entity,
+      String requestingUsername,
+      Instant turnDeadline) {
     UUID currentDealId = game.getCurrentDealId();
     return new Game(
         entity.getId(),
@@ -66,8 +75,9 @@ public class RestMapper {
         game.getPlayers().stream().map(p -> toRest(p, game)).collect(Collectors.toList()),
         new ArrayList<>(),
         currentDealId,
-        toRest(game.getCurrentDeal(), currentDealId, game),
-        you(game, requestingUsername));
+        toRest(game.getCurrentDeal(), currentDealId, game, turnDeadline),
+        you(game, requestingUsername),
+        entity.getClosed());
   }
 
   private YouState you(vendredi.soir.karata.core.entity.Game game, String requestingUsername) {

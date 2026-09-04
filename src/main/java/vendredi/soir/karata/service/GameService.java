@@ -1,5 +1,6 @@
 package vendredi.soir.karata.service;
 
+import java.time.Instant;
 import java.util.*;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -7,6 +8,8 @@ import org.springframework.transaction.annotation.Transactional;
 import vendredi.soir.karata.core.action.*;
 import vendredi.soir.karata.core.entity.*;
 import vendredi.soir.karata.core.rules.TexasHoldemRules;
+import vendredi.soir.karata.endpoint.rest.exception.ConflictException;
+import vendredi.soir.karata.endpoint.rest.exception.ForbiddenException;
 import vendredi.soir.karata.repository.model.poker.*;
 import vendredi.soir.karata.repository.poker.*;
 
@@ -33,7 +36,10 @@ public class GameService {
 
   @Transactional
   public void joinGame(UUID gid, String user, Long chips) {
-    lockGame(gid);
+    GameEntity ge = lockGame(gid);
+    if (Boolean.TRUE.equals(ge.getClosed())) {
+      throw new ConflictException("Table is closed");
+    }
     playerRepository.save(
         PlayerEntity.builder()
             .id(UUID.randomUUID())
@@ -75,6 +81,30 @@ public class GameService {
   @Transactional
   public void saveAction(UUID gid, UUID did, Action a) {
     actionRepository.save(actionMapper.toEntity(gid, did, a));
+  }
+
+  /**
+   * Ends a table for good: no further joins, deals, or actions are accepted afterwards. Anyone
+   * seated at the table can close it - there's no host/owner concept beyond that.
+   */
+  @Transactional
+  public void closeGame(UUID gid, String username) {
+    GameEntity ge = lockGame(gid);
+    if (Boolean.TRUE.equals(ge.getClosed())) {
+      throw new ConflictException("Table is already closed");
+    }
+    boolean seated =
+        playerRepository.findByGameId(gid).stream().anyMatch(p -> p.getUsername().equals(username));
+    if (!seated) {
+      throw new ForbiddenException("Only a seated player can close this table");
+    }
+    ge.setClosed(true);
+    gameRepository.save(ge);
+  }
+
+  @Transactional(readOnly = true)
+  public Optional<Instant> getLastActionTimestamp(UUID did) {
+    return actionRepository.findTopByDealIdOrderByActionOrderDesc(did).map(ActionEntity::getTimestamp);
   }
 
   @Transactional(readOnly = true)

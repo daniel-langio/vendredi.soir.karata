@@ -99,6 +99,32 @@ public class Deal {
     return contributions.values().stream().max(Long::compare).orElse(0L);
   }
 
+  /**
+   * Human-readable description of the last action this player took in the current betting round
+   * (e.g. "CALL 20", "FOLD", "CHECK"), or null if they haven't acted since the last street change.
+   */
+  public String getLastActionDescription(Player player) {
+    List<Action> roundActions = getActionsInCurrentPhase();
+    for (int i = roundActions.size() - 1; i >= 0; i--) {
+      Action a = roundActions.get(i);
+      if (a instanceof PlayerAction pa && pa.getPlayer().equals(player)) {
+        return describeAction(a);
+      }
+    }
+    return null;
+  }
+
+  private static String describeAction(Action a) {
+    if (a instanceof Check) return "CHECK";
+    if (a instanceof Fold) return "FOLD";
+    if (a instanceof Call call) return "CALL " + call.getAmount();
+    if (a instanceof Bet bet) return "BET " + bet.getAmount();
+    if (a instanceof Raise raise) return "RAISE " + raise.getAmount();
+    if (a instanceof SmallBlind sb) return "SMALL BLIND " + sb.getAmount();
+    if (a instanceof BigBlind bb) return "BIG BLIND " + bb.getAmount();
+    return null;
+  }
+
   public String getCurrentPhase() {
     if (history.stream().anyMatch(a -> a instanceof Showdown)) return "SHOWDOWN";
     long revealCount = history.stream().filter(a -> a instanceof RevealCards).count();

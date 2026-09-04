@@ -44,11 +44,15 @@ components:
           $ref: '#/components/schemas/DealState'
         you:
           $ref: '#/components/schemas/YouState'
+        closed:
+          type: boolean
+          description: Once true, the table is permanently done - no more joins, deals, or actions.
       required:
         - gameId
         - blinds
         - players
         - dealHistory
+        - closed
 
     YouState:
       type: object
@@ -95,6 +99,13 @@ components:
           description: Chips this player has put in during the current betting round.
         blind:
           $ref: '#/components/schemas/BlindRole'
+        lastAction:
+          type: string
+          nullable: true
+          description: |
+            Human-readable description of the last action this player took in the current betting
+            round (e.g. "CALL 20", "FOLD", "CHECK"). Null if they haven't acted since the last
+            street change.
       required:
         - playerId
         - username
@@ -155,6 +166,15 @@ components:
           description: The highest contribution any player has made in the current betting round.
         outcome:
           $ref: '#/components/schemas/DealOutcome'
+        turnDeadline:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            Server-computed deadline for activePlayerId to act, derived from the last action taken
+            on this deal plus a fixed 30s window. Null once there is no active player (e.g. past
+            showdown). If a player's turn reaches this deadline without them acting, the server
+            auto-folds them the next time this game is read or acted on.
       required:
         - dealId
         - communityCards
@@ -242,13 +262,8 @@ components:
           type: integer
           format: int64
           description: Required for RAISE and BET.
-        timeoutLimit:
-          type: string
-          format: date-time
-          description: Absolute timestamp indicating the precise action timeout limit (ISO 8601).
       required:
         - actionType
-        - timeoutLimit
 
     Hand:
       type: object
@@ -445,6 +460,33 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /games/{gameId}/close:
+    post:
+      summary: Close the table for good
+      description: |
+        Ends the table permanently: no further joins, deals, or actions are accepted afterwards.
+        The game remains readable (final chip counts stay visible). Any player currently seated
+        at the table may close it - there is no separate host/owner role.
+      tags: [Game Infrastructure]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Table closed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Caller is not seated at this table
+        '409':
+          $ref: '#/components/responses/Conflict'
+
   /games/{gameId}/deals:
     post:
       summary: Start a new deal at the table
@@ -470,6 +512,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /games/{gameId}/events:
     get:
@@ -526,6 +570,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /deals/{dealId}/hand/me:
     get:
@@ -563,6 +609,12 @@ responses:
           $ref: '#/components/schemas/Error'
   Unauthorized:
     description: Unauthorized
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/Error'
+  Conflict:
+    description: Conflict
     content:
       application/json:
         schema:

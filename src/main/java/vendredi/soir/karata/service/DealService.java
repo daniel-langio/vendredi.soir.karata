@@ -1,5 +1,6 @@
 package vendredi.soir.karata.service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import lombok.AllArgsConstructor;
@@ -14,7 +15,47 @@ import vendredi.soir.karata.repository.model.poker.GameEntity;
 @Service
 @AllArgsConstructor
 public class DealService {
+  public static final Duration TURN_TIMEOUT = Duration.ofSeconds(30);
+
   private final GameService gs;
+
+  /**
+   * The deadline for the player currently on the clock to act, derived from the timestamp of the
+   * last persisted action on this deal (there is always at least one - the deal's shuffle). Null
+   * if the deal has no active player (e.g. past showdown).
+   */
+  public Instant currentTurnDeadline(UUID gid, UUID did) {
+    Game g = gs.getGame(gid);
+    Deal d = g.getCurrentDeal();
+    if (d == null || g.getRules().determineNextPlayer(d, g.getPlayers()) == null) {
+      return null;
+    }
+    return gs.getLastActionTimestamp(did).map(t -> t.plus(TURN_TIMEOUT)).orElse(null);
+  }
+
+  /**
+   * Auto-folds whichever player is on the clock, repeatedly, for as long as their turn's deadline
+   * has already passed. Called on every read/write of a game so that an AFK player doesn't stall
+   * the table forever - there's no scheduler in this deployment to do it proactively.
+   */
+  @Transactional
+  public void enforceTurnTimeout(UUID gid) {
+    if (Boolean.TRUE.equals(gs.lockGame(gid).getClosed())) return;
+    Game g = gs.getGame(gid);
+    Deal d = g.getCurrentDeal();
+    if (d == null) return;
+    UUID did = g.getCurrentDealId();
+
+    while (true) {
+      Player active = g.getRules().determineNextPlayer(d, g.getPlayers());
+      if (active == null) break;
+      Instant deadline = gs.getLastActionTimestamp(did).map(t -> t.plus(TURN_TIMEOUT)).orElse(null);
+      if (deadline == null || Instant.now().isBefore(deadline)) break;
+
+      saveAll(gid, did, g.getDealer().execute(g, d, new Fold(active)));
+      progressDealIfNeeded(g, d, gid, did);
+    }
+  }
 
   @Transactional
   public void takeAction(UUID did, ActionRequest req) {
@@ -32,7 +73,10 @@ public class DealService {
 
     // Load game state with transactional locking
     UUID gid = gs.getGameIdByDealId(did);
-    gs.lockGame(gid);
+    if (Boolean.TRUE.equals(gs.lockGame(gid).getClosed())) {
+      throw new ConflictException("Table is closed");
+    }
+    enforceTurnTimeout(gid);
 
     Game g = gs.getGame(gid);
     Deal d = g.getCurrentDeal();
@@ -54,11 +98,6 @@ public class DealService {
     }
     if (!nextPlayer.getName().equals(username)) {
       throw new ForbiddenException("Acting out of turn");
-    }
-
-    // Server-enforced timer check
-    if (req.timeoutLimit() != null && Instant.now().isAfter(req.timeoutLimit())) {
-      throw new BadRequestException("Action timed out");
     }
 
     long amt = req.amount() != null ? req.amount() : 0L;
@@ -85,6 +124,9 @@ public class DealService {
   @Transactional
   public void startDeal(UUID gid) {
     GameEntity ge = gs.lockGame(gid);
+    if (Boolean.TRUE.equals(ge.getClosed())) {
+      throw new ConflictException("Table is closed");
+    }
     Game g = gs.getGame(gid);
 
     List<Player> eligible = g.getPlayers().stream().filter(p -> g.getChips(p) > 0).toList();

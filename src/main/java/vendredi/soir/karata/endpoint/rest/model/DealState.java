@@ -1,5 +1,6 @@
 package vendredi.soir.karata.endpoint.rest.model;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -10,4 +11,5 @@ public record DealState(
     Phase phase,
     UUID activePlayerId,
     Long currentRoundBet,
-    DealOutcome outcome) {}
+    DealOutcome outcome,
+    Instant turnDeadline) {}

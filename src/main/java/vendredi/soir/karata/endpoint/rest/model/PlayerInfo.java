@@ -8,4 +8,5 @@ public record PlayerInfo(
     Long chips,
     PlayerStatus status,
     Long contributionThisRound,
-    BlindRole blind) {}
+    BlindRole blind,
+    String lastAction) {}

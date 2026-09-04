@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -96,8 +95,8 @@ class PokerGameTest {
 
       // startDeal now auto-posts blinds (Alice=SB 10, Bob=BB 20), so Alice must call the
       // extra 10 to match the big blind before betting can close.
-      dealService.takeAction(dealId, new ActionRequest("CALL", 10L, Instant.now().plusSeconds(60)));
-      dealService.takeAction(dealId, new ActionRequest("CHECK", 0L, Instant.now().plusSeconds(60)));
+      dealService.takeAction(dealId, new ActionRequest("CALL", 10L));
+      dealService.takeAction(dealId, new ActionRequest("CHECK", 0L));
 
       assertNotNull(game.getCurrentDeal());
     }

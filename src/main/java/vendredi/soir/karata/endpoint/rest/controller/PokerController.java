@@ -1,5 +1,6 @@
 package vendredi.soir.karata.endpoint.rest.controller;
 
+import java.time.Instant;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -26,7 +27,7 @@ public class PokerController {
   public Game create(@RequestBody CreateGameRequest r) {
     validateCreateGame(r);
     GameEntity ge = gs.createGame(r.name(), r.blinds().small(), r.blinds().big());
-    return rm.toRest(gs.getGame(ge.getId()), ge, null);
+    return rm.toRest(gs.getGame(ge.getId()), ge, null, null);
   }
 
   @GetMapping("/games/{gid}")
@@ -34,7 +35,11 @@ public class PokerController {
       @PathVariable UUID gid,
       @RequestHeader(value = "Authorization", required = false) String authHeader) {
     String username = authHeader != null ? jwtService.validateAndExtractUsername(authHeader) : null;
-    return rm.toRest(gs.getGame(gid), gr.findById(gid).orElseThrow(), username);
+    ds.enforceTurnTimeout(gid);
+    vendredi.soir.karata.core.entity.Game g = gs.getGame(gid);
+    UUID currentDealId = g.getCurrentDealId();
+    Instant turnDeadline = currentDealId != null ? ds.currentTurnDeadline(gid, currentDealId) : null;
+    return rm.toRest(g, gr.findById(gid).orElseThrow(), username, turnDeadline);
   }
 
   @PostMapping("/games/{gid}/players")
@@ -46,6 +51,15 @@ public class PokerController {
     String username = jwtService.validateAndExtractUsername(authHeader);
     validateJoinGame(r);
     gs.joinGame(gid, username, r.buyInAmount());
+  }
+
+  @PostMapping("/games/{gid}/close")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void close(
+      @PathVariable UUID gid,
+      @RequestHeader(value = "Authorization", required = false) String authHeader) {
+    String username = jwtService.validateAndExtractUsername(authHeader);
+    gs.closeGame(gid, username);
   }
 
   @PostMapping("/games/{gid}/deals")

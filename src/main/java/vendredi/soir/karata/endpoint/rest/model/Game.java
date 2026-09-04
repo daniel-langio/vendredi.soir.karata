@@ -11,4 +11,5 @@ public record Game(
     List<UUID> dealHistory,
     UUID currentDealId,
     DealState currentDeal,
-    YouState you) {}
+    YouState you,
+    Boolean closed) {}

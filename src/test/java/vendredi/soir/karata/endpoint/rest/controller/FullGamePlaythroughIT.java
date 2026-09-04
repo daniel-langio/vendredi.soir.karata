@@ -3,7 +3,6 @@ package vendredi.soir.karata.endpoint.rest.controller;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -114,7 +113,7 @@ class FullGamePlaythroughIT extends FacadeIT {
 
     // Once the hand is over, no further action should be accepted.
     HttpEntity<ActionRequest> lateAction =
-        authorized("alice", new ActionRequest("CHECK", null, Instant.now().plusSeconds(60)));
+        authorized("alice", new ActionRequest("CHECK", null));
     ResponseEntity<Void> rejected =
         rest.postForEntity("/poker/deals/" + dealId + "/actions", lateAction, Void.class);
     assertEquals(
@@ -163,7 +162,7 @@ class FullGamePlaythroughIT extends FacadeIT {
 
   private void action(UUID dealId, String username, String actionType, Long amount) {
     HttpEntity<ActionRequest> req =
-        authorized(username, new ActionRequest(actionType, amount, Instant.now().plusSeconds(60)));
+        authorized(username, new ActionRequest(actionType, amount));
     ResponseEntity<String> resp =
         rest.postForEntity("/poker/deals/" + dealId + "/actions", req, String.class);
     assertEquals(

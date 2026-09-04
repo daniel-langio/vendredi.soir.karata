@@ -15,4 +15,6 @@ public class GameEntity {
   private String name;
   private Long smallBlind;
   private Long bigBlind;
+
+  @Builder.Default private Boolean closed = false;
 }
