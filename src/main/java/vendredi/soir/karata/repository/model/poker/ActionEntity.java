@@ -21,6 +21,9 @@ public class ActionEntity {
   private Integer actionOrder;
 
   private String type;
+
+  @Column(columnDefinition = "TEXT")
   private String payload;
+
   private Instant timestamp;
 }
