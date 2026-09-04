@@ -1,6 +1,8 @@
 # Texas Hold'em Poker API — Status Report
 
-_Generated 2026-09-04. Covers the functional audit of the deployed API and the fixes applied in response._
+_Generated 2026-09-04, updated after full CI/CD verification. Covers the functional audit of the deployed API, every bug found (including several only CI's real-Postgres integration test surfaced), and confirms a complete hand now plays correctly on the live deployment._
+
+**Bottom line: a full heads-up hand can now be played end-to-end through the live API** — create game, buy in, start deal (auto blinds + hole cards), bet through pre-flop/flop/turn/river with automatic street progression, automatic showdown, and correct pot award with chips conserved. Verified live: `phase: SHOWDOWN`, `activePlayerId: null`, chips 1020/980 (40-chip pot correctly awarded), total 2000 conserved.
 
 ## 1. What this project is
 
@@ -55,6 +57,39 @@ New supporting core logic (in `core/`, pure Java, no framework dependency — co
 - `TexasHoldemRules.determineNextPlayer` — now returns `null` once a `Showdown` has occurred in the deal, so the existing "No active turn or deal is over" check in `DealService.takeAction` correctly rejects actions on a finished hand (previously it could look like a player still had a turn).
 - `Deal.getCurrentPhase()` — now reports `SHOWDOWN` once a `Showdown` action exists (previously the "SHOWDOWN" branch was dead code: reveal count never exceeds 3 in real play, so a completed hand permanently showed as `RIVER`).
 
+### 2.4 Deck never actually shuffled (fixed)
+**Symptom:** every deal in every game dealt the exact same cards in the exact same order (2 through Ace of clubs, then diamonds, hearts, spades).
+
+**Root cause:** `DealService.startDeal` built the `ShuffleDeck` action from `Deck.CLASSIC`'s card list directly, without ever calling `Deck.shuffle()`.
+
+**Fix:** call `d.getDeck().shuffle()` before capturing the order into the `ShuffleDeck` action.
+
+### 2.5 Jackson silently corrupted every replayed action (fixed — the real root cause behind 2.1)
+**Symptom:** discovered while writing the CI integration test (`FullGamePlaythroughIT`, added in this pass to actually simulate a full game in CI — see §6): `startDeal` failed with "at least 2 players with chips" even for freshly-funded players, and separately `Player` deserialization threw `MismatchedInputException: cannot deserialize from Object value (no delegate- or property-based Creator)`.
+
+**Root cause:** `Player` and every `core.action` class (`Bet`, `Call`, `Check`, `Fold`, `Raise`, `SmallBlind`, `BigBlind`, `DealHoleCard`, `RevealCards`, `ShuffleDeck`, `AwardPot`, `InitializePlayerChips`) had **both** a Lombok-forced no-args constructor and a real data constructor, with no `@JsonCreator`/`@JsonProperty` hint. Jackson consistently picked the no-args constructor when deserializing a replayed action, silently leaving every field at its Java default (null `Player`, `0` amount, null card list...) regardless of the actual JSON payload. This is the **actual root cause of §2.1** — the `Player.equals()` fix was necessary but not sufficient, since a replayed action's player field was landing as `null`/empty, not just a different-but-equal instance.
+
+This was invisible to every existing unit test because none of them replay from persisted storage — they all keep operating on the same in-memory `Game`/`Deal` objects for the whole test, so the "player" field is never round-tripped through JSON.
+
+**Fix:** removed the no-args constructors and added explicit `@JsonCreator`/`@JsonProperty` annotations to every constructor, so deserialization no longer depends on Jackson's implicit-creator heuristics at all (an intermediate attempt — enabling the `-parameters` compiler flag plus `ParameterNamesModule` — fixed multi-argument constructors but not single-argument ones like `Player(name)`, since Jackson's implicit single-arg detection defaults to "delegate" mode, expecting a raw scalar, not an object; it won't guess otherwise even with those in place). Also fixed the same class of issue in `EndpointConf`'s custom `@Primary` `ObjectMapper` bean, which needed `FAIL_ON_EMPTY_BEANS` disabled directly (an `application.properties` Jackson setting has no effect on a manually-constructed `ObjectMapper` bean, since it bypasses Spring Boot's Jackson auto-configuration).
+
+### 2.6 Showdown couldn't be serialized (fixed)
+**Symptom:** once auto-showdown was implemented (§2.3), triggering it threw `InvalidDefinitionException: No serializer found for class Showdown and no properties discovered`.
+
+**Root cause:** `Showdown` has zero fields, and Jackson's default `FAIL_ON_EMPTY_BEANS` rejects serializing a bean with no discoverable properties. This was never exercised before because `Showdown` was previously only ever used in in-memory core unit tests, never actually persisted through the REST API.
+
+**Fix:** disable `FAIL_ON_EMPTY_BEANS` on the app's `ObjectMapper` bean (see §2.5).
+
+### 2.7 Pot award never persisted (fixed)
+**Symptom:** a hand would correctly reach `SHOWDOWN`, but the pot's chips (e.g. 40) permanently vanished from both players' totals — total chips no longer summed to the amount bought in.
+
+**Root cause:** `Dealer.execute(Game, Deal, Action)` returned `void`. When the passed-in action was a `Showdown`, `handleShowdown` applied the resulting `AwardPot` action(s) to the **in-memory** `Deal` object as a side effect, but `DealService` only ever persisted the `Showdown` action it explicitly passed in — it had no way to know an `AwardPot` had also been generated. The award looked correct within the same request (same in-memory objects) but was silently dropped on the next replay from storage. Invisible in core unit tests for the same reason as §2.5: they never replay from storage.
+
+**Fix:** `Dealer.execute` now returns the list of every action actually applied (the given action plus any generated `AwardPot`s), and `DealService` persists all of them via a new `saveAll` helper.
+
+### 2.8 Pre-existing mock-ordering bug in `PokerGameTest` (fixed, test-only)
+While chasing the above, one CI failure turned out to be a bug in the test itself, not production code: `PokerGameTest.simulate_complete_game` stubbed `actionRepository.save(...)` to record actions into a list **after** calling `joinGame` twice — but `joinGame` persists a buy-in action immediately, and an unstubbed Mockito mock silently drops the call (returns `null`, records nothing) rather than throwing. Both players' buy-ins were silently lost, so chips always replayed as `0`. This was always latent — the test never actually asserted on chip totals before `startDeal` started enforcing "at least 2 players with chips" — and is fixed by moving the stub setup before the `joinGame` calls.
+
 ### 2.3.1 Known simplification carried forward
 The betting-round-complete check treats blinds as "acted", which means the classic **big-blind option** (BB should still get a chance to act if everyone just calls around to them preflop) is not implemented — the round is considered closed as soon as contributions match, even if the BB never voluntarily acted. This is consistent with the project's existing "simplified" rules philosophy (no button rotation, no side pots) and was left as-is per instructions not to over-engineer beyond fixing what's broken. Flagged here for visibility, not fixed.
 
@@ -71,4 +106,10 @@ The betting-round-complete check treats blinds as "acted", which means the class
 
 ## 5. Verification
 
-Per project convention, changes were **not** built or tested locally — CI (`.github/workflows/ci.yml`, `./gradlew test` + format check) runs on every push/PR and is the source of truth for build/test status. Check `gh pr checks` or `gh run list` after pushing rather than running Gradle locally.
+Per project convention, changes were **not** built or tested locally — every fix was pushed to `preprod` and verified via CI (`.github/workflows/ci.yml`, `./gradlew test` + format check; `gh run list`/`gh run view --log` used to watch and diagnose each run) rather than running Gradle locally. This iterative push-and-watch cycle (11 fix/diagnostic commits) is exactly what surfaced §§2.4–2.8: bugs that only appear once real JSON serialization, a real Postgres round-trip, and a truly independent replay are all exercised together — which unit tests mocking the repositories, or hand-driving the core engine in-memory, structurally cannot catch.
+
+CI is green as of commit `4a14c7e`. After the `preprod` push, the live deployment was re-verified directly: created a game, bought in two players, played a complete heads-up hand (blinds → pre-flop call → flop/turn/river checks → automatic showdown), and confirmed the pot was correctly awarded with all chips conserved (2000 total, split 1020/980).
+
+## 6. New: end-to-end CI test
+
+Added `FullGamePlaythroughIT` — drives a complete heads-up hand through the real HTTP API (real controllers, services, persistence, and a real Postgres via Testcontainers, using the existing but previously-unused `FacadeIT` base class) from table creation to showdown, asserting on phase transitions, chip totals, and that no further actions are accepted once a hand concludes. This is the test that caught §§2.5–2.7 and now runs on every push/PR as part of `./gradlew test`.
