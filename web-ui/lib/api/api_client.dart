@@ -115,12 +115,8 @@ class ApiClient {
     required String dealId,
     required String actionType,
     int? amount,
-    required String timeoutLimit,
   }) async {
-    final bodyMap = <String, dynamic>{
-      'actionType': actionType,
-      'timeoutLimit': timeoutLimit,
-    };
+    final bodyMap = <String, dynamic>{'actionType': actionType};
     if (amount != null) {
       bodyMap['amount'] = amount;
     }
@@ -129,6 +125,21 @@ class ApiClient {
       Uri.parse('$baseUrl/deals/$dealId/actions'),
       headers: _headers,
       body: jsonEncode(bodyMap),
+    );
+
+    if (response.statusCode == 204) {
+      return;
+    } else {
+      _throwDetailedError(response);
+    }
+  }
+
+  /// POST /games/{gameId}/close
+  /// Ends the table for good: no further joins, deals, or actions afterwards.
+  Future<void> closeTable(String gameId) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/games/$gameId/close'),
+      headers: _headers,
     );
 
     if (response.statusCode == 204) {

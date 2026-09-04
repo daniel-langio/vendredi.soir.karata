@@ -32,8 +32,6 @@ class _TableScreenState extends State<TableScreen> {
   bool _isLoading = false;
   bool _isStale = false;
   DateTime? _lastUpdated;
-  DateTime? _turnDeadline;
-  String? _turnDeadlineForDealId;
 
   String? _selectedActionType; // 'BET' or 'RAISE' while the sizer is open
   int _sizerAmount = 0;
@@ -62,9 +60,17 @@ class _TableScreenState extends State<TableScreen> {
   String? get _activePlayerId => _currentDeal?['activePlayerId']?.toString();
   Map<String, dynamic>? get _you => _game?['you'] as Map<String, dynamic>?;
   List<dynamic> get _players => _game?['players'] as List<dynamic>? ?? [];
+  bool get _isClosed => _game?['closed'] == true;
   bool get _isMyTurn {
     final me = _players.firstWhere((p) => p['username'] == widget.username, orElse: () => null);
     return me != null && _activePlayerId != null && _activePlayerId == me['playerId']?.toString();
+  }
+
+  /// The server's authoritative deadline for whoever's on the clock to act - see
+  /// DealService.enforceTurnTimeout on the backend, which auto-folds past this point.
+  DateTime? get _turnDeadline {
+    final raw = _currentDeal?['turnDeadline'] as String?;
+    return raw != null ? DateTime.parse(raw) : null;
   }
 
   Future<void> _refresh({bool showSpinner = false}) async {
@@ -92,26 +98,10 @@ class _TableScreenState extends State<TableScreen> {
         _isStale = false;
         _lastUpdated = DateTime.now();
       });
-      _maybeStartTurnClock(dealId);
     } catch (_) {
       if (mounted) setState(() => _isStale = true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _maybeStartTurnClock(String? dealId) {
-    if (!_isMyTurn) {
-      _turnDeadline = null;
-      _turnDeadlineForDealId = null;
-      return;
-    }
-    // Only (re)start the clock the first time this becomes my turn on this deal;
-    // repeated polls while it's still my turn shouldn't reset the countdown.
-    final key = '$dealId:$_phase:$_activePlayerId';
-    if (_turnDeadlineForDealId != key) {
-      _turnDeadlineForDealId = key;
-      _turnDeadline = DateTime.now().add(const Duration(seconds: 30));
     }
   }
 
@@ -132,13 +122,7 @@ class _TableScreenState extends State<TableScreen> {
     if (_dealId.isEmpty) return;
     setState(() => _isLoading = true);
     try {
-      final timeout = DateTime.now().add(const Duration(seconds: 30)).toUtc().toIso8601String();
-      await _apiClient.takeAction(
-        dealId: _dealId,
-        actionType: actionType,
-        amount: amount,
-        timeoutLimit: timeout,
-      );
+      await _apiClient.takeAction(dealId: _dealId, actionType: actionType, amount: amount);
       setState(() => _selectedActionType = null);
       await _refresh();
     } catch (e) {
@@ -161,6 +145,40 @@ class _TableScreenState extends State<TableScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Table ID copied — send it to whoever you want to invite')),
     );
+  }
+
+  Future<void> _closeTable() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Close this table?'),
+        content: const Text(
+          'Nobody will be able to join, start a hand, or act at this table again. '
+          'This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Close table', style: TextStyle(color: KarataColors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await _apiClient.closeTable(widget.gameId);
+      await _refresh();
+    } catch (e) {
+      _showError('Could not close table: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   void _openSizer(String type) {
@@ -187,13 +205,23 @@ class _TableScreenState extends State<TableScreen> {
     return Scaffold(
       backgroundColor: KarataColors.bg,
       appBar: AppBar(
-        title: Text(gameName),
+        title: Text(_isClosed ? '$gameName (closed)' : gameName),
         actions: [
           IconButton(
             icon: const Icon(Icons.ios_share, size: 20),
             tooltip: 'Copy invite',
             onPressed: _copyInvite,
           ),
+          if (!_isClosed)
+            PopupMenuButton<void>(
+              icon: const Icon(Icons.more_vert, size: 20),
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  onTap: _closeTable,
+                  child: const Text('Close table', style: TextStyle(color: KarataColors.red)),
+                ),
+              ],
+            ),
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Center(
@@ -266,7 +294,7 @@ class _TableScreenState extends State<TableScreen> {
                           ],
                         ],
                       ),
-                      if (_isMyTurn && outcome == null)
+                      if (_isMyTurn && outcome == null && !_isClosed)
                         const Positioned(
                           top: 0,
                           left: 0,
@@ -335,7 +363,7 @@ class _TableScreenState extends State<TableScreen> {
   }
 
   Widget _buildTurnLine() {
-    if (_dealId.isEmpty || _phase == 'SHOWDOWN') return const SizedBox();
+    if (_isClosed || _dealId.isEmpty || _phase == 'SHOWDOWN') return const SizedBox();
 
     if (_isMyTurn && _turnDeadline != null) {
       final remaining = _turnDeadline!.difference(DateTime.now()).inSeconds;
@@ -366,6 +394,19 @@ class _TableScreenState extends State<TableScreen> {
   }
 
   Widget _buildActionArea() {
+    if (_isClosed) {
+      return _ActionBarContainer(
+        child: const Center(
+          child: Text('THIS TABLE IS CLOSED',
+              style: TextStyle(
+                  color: KarataColors.dim,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  letterSpacing: 1.1)),
+        ),
+      );
+    }
+
     if (_dealId.isEmpty) {
       return _ActionBarContainer(
         child: SizedBox(
@@ -625,6 +666,7 @@ class _SeatCard extends StatelessWidget {
     final chips = player['chips']?.toString() ?? '0';
     final status = player['status']?.toString() ?? 'ACTIVE';
     final blind = player['blind']?.toString();
+    final lastAction = player['lastAction']?.toString();
     final contribution = (player['contributionThisRound'] as num?)?.toInt() ?? 0;
     final isActive = activePlayerId != null && activePlayerId == playerId;
     final isMe = username == myUsername;
@@ -648,6 +690,18 @@ class _SeatCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            if (lastAction != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF33313A),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(lastAction,
+                    style: const TextStyle(
+                        fontSize: 8, fontWeight: FontWeight.bold, color: KarataColors.dim)),
+              ),
             Stack(
               alignment: Alignment.center,
               children: [
