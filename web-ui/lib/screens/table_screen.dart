@@ -60,6 +60,12 @@ class _TableScreenState extends State<TableScreen> {
   String? get _activePlayerId => _currentDeal?['activePlayerId']?.toString();
   Map<String, dynamic>? get _you => _game?['you'] as Map<String, dynamic>?;
   List<dynamic> get _players => _game?['players'] as List<dynamic>? ?? [];
+  List<dynamic> get _opponents =>
+      _players.where((p) => p['username'] != widget.username).toList();
+  Map<String, dynamic>? get _me => _players.firstWhere(
+        (p) => p['username'] == widget.username,
+        orElse: () => null,
+      ) as Map<String, dynamic>?;
   bool get _isClosed => _game?['closed'] == true;
   bool get _isMyTurn {
     final me = _players.firstWhere((p) => p['username'] == widget.username, orElse: () => null);
@@ -294,13 +300,33 @@ class _TableScreenState extends State<TableScreen> {
                           ],
                         ],
                       ),
-                      if (_isMyTurn && outcome == null && !_isClosed)
-                        const Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          child: Center(child: _YourTurnBadge()),
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              height: 90,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                itemCount: _opponents.length,
+                                itemBuilder: (context, idx) => _SeatCard(
+                                  player: _opponents[idx] as Map<String, dynamic>,
+                                  activePlayerId: _activePlayerId,
+                                  myUsername: widget.username,
+                                ),
+                              ),
+                            ),
+                            if (_isMyTurn && outcome == null && !_isClosed)
+                              const Padding(
+                                padding: EdgeInsets.only(top: 4),
+                                child: _YourTurnBadge(),
+                              ),
+                          ],
                         ),
+                      ),
                     ],
                   ),
                 ),
@@ -310,9 +336,9 @@ class _TableScreenState extends State<TableScreen> {
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
-                  itemCount: _players.length,
+                  itemCount: _me != null ? 1 : 0,
                   itemBuilder: (context, idx) => _SeatCard(
-                    player: _players[idx] as Map<String, dynamic>,
+                    player: _me!,
                     activePlayerId: _activePlayerId,
                     myUsername: widget.username,
                   ),
