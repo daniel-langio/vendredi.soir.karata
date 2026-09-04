@@ -42,11 +42,39 @@ components:
           nullable: true
         currentDeal:
           $ref: '#/components/schemas/DealState'
+        you:
+          $ref: '#/components/schemas/YouState'
       required:
         - gameId
         - blinds
         - players
         - dealHistory
+
+    YouState:
+      type: object
+      nullable: true
+      description: |
+        Betting context personalized for the authenticated caller. Only present when the request
+        included a valid Authorization header for a player seated in this game, and a deal is
+        currently in progress. Absent (or the whole "you" key omitted) for unauthenticated/preview
+        requests, spectators, or when there is no active deal.
+      properties:
+        callAmount:
+          type: integer
+          format: int64
+          description: Additional chips needed to call and match the current round's bet.
+        minRaise:
+          type: integer
+          format: int64
+          description: Minimum legal amount for a BET or RAISE right now.
+        maxRaise:
+          type: integer
+          format: int64
+          description: The caller's current chip stack (an all-in raise/bet).
+      required:
+        - callAmount
+        - minRaise
+        - maxRaise
 
     PlayerInfo:
       type: object
@@ -59,10 +87,30 @@ components:
         chips:
           type: integer
           format: int64
+        status:
+          $ref: '#/components/schemas/PlayerStatus'
+        contributionThisRound:
+          type: integer
+          format: int64
+          description: Chips this player has put in during the current betting round.
+        blind:
+          $ref: '#/components/schemas/BlindRole'
       required:
         - playerId
         - username
         - chips
+        - status
+        - contributionThisRound
+
+    PlayerStatus:
+      type: string
+      enum: [ACTIVE, FOLDED, ALL_IN]
+
+    BlindRole:
+      type: string
+      enum: [SMALL, BIG]
+      nullable: true
+      description: Which blind this player posted this deal, or null if neither.
 
     Blinds:
       type: object
@@ -101,11 +149,54 @@ components:
           type: string
           format: uuid
           nullable: true
+        currentRoundBet:
+          type: integer
+          format: int64
+          description: The highest contribution any player has made in the current betting round.
+        outcome:
+          $ref: '#/components/schemas/DealOutcome'
       required:
         - dealId
         - communityCards
         - pot
         - phase
+        - currentRoundBet
+
+    DealOutcome:
+      type: object
+      nullable: true
+      description: Present once the deal has reached SHOWDOWN and the pot has been awarded.
+      properties:
+        winners:
+          type: array
+          items:
+            $ref: '#/components/schemas/WinnerInfo'
+      required:
+        - winners
+
+    WinnerInfo:
+      type: object
+      properties:
+        playerId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        amount:
+          type: integer
+          format: int64
+          description: Chips this winner was awarded from the pot.
+        handRank:
+          type: string
+          nullable: true
+          description: |
+            Human-readable hand description, e.g. "two pair, Js and 9s". Null when the pot was won
+            uncontested (every other player folded), since hands are never compared or revealed
+            in that case.
+      required:
+        - playerId
+        - username
+        - amount
 
     Card:
       type: string
@@ -182,10 +273,86 @@ components:
         - code
         - message
 
+    AuthRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+        password:
+          type: string
+          minLength: 6
+      required:
+        - username
+        - password
+
+    TokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: A signed JWT to send as `Authorization Bearer <token>` on subsequent requests.
+      required:
+        - token
+
 security:
   - BearerAuth: []
 
 paths:
+  /auth/register:
+    post:
+      summary: Create an account and receive a signed auth token
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Username already taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      summary: Exchange username/password for a signed auth token
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Invalid username or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /games:
     post:
       summary: Create a new game table
@@ -219,7 +386,15 @@ paths:
   /games/{gameId}:
     get:
       summary: Get game details
+      description: |
+        Authorization is optional here: omit it for an unauthenticated preview (e.g. before
+        joining), or include a valid Bearer token to also receive the personalized "you" betting
+        context if you're seated in this game. An invalid (malformed/unsigned) token still fails
+        with 401 - "optional" only covers omitting the header entirely.
       tags: [Game Infrastructure]
+      security:
+        - {}
+        - BearerAuth: []
       parameters:
         - name: gameId
           in: path
