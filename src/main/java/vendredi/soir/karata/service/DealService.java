@@ -125,8 +125,8 @@ public class DealService {
   }
 
   /**
-   * Advances the deal to the next street (or triggers the showdown) once the current betting
-   * round is complete, or immediately awards the pot if every other player has folded.
+   * Advances the deal to the next street (or triggers the showdown) once the current betting round
+   * is complete, or immediately awards the pot if every other player has folded.
    */
   private void progressDealIfNeeded(Game g, Deal d, UUID gid, UUID did) {
     if ("SHOWDOWN".equals(d.getCurrentPhase())) {

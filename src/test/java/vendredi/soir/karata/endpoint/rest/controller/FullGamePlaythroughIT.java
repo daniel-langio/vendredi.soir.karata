@@ -22,11 +22,11 @@ import vendredi.soir.karata.endpoint.rest.model.PlayerInfo;
 
 /**
  * Drives a complete heads-up hand through the real HTTP API (real controllers, services,
- * persistence, and a real Postgres via Testcontainers) from table creation to showdown. This
- * exists because unit tests mocking the repositories or hand-driving the core engine directly
- * missed real bugs (chip ledger silently zeroed by a broken Player.equals(), deal-start crashing
- * on a too-narrow DB column, no automatic blind/hole-card/street orchestration at all) that only
- * showed up when the whole stack — including a real JSON/DB round trip — was exercised together.
+ * persistence, and a real Postgres via Testcontainers) from table creation to showdown. This exists
+ * because unit tests mocking the repositories or hand-driving the core engine directly missed real
+ * bugs (chip ledger silently zeroed by a broken Player.equals(), deal-start crashing on a
+ * too-narrow DB column, no automatic blind/hole-card/street orchestration at all) that only showed
+ * up when the whole stack — including a real JSON/DB round trip — was exercised together.
  */
 class FullGamePlaythroughIT extends FacadeIT {
 
@@ -83,8 +83,7 @@ class FullGamePlaythroughIT extends FacadeIT {
     assertEquals(Phase.SHOWDOWN, finalGame.currentDeal().phase(), "hand should auto-conclude");
     assertEquals(5, communityCardCount(finalGame));
 
-    long totalChips =
-        finalGame.players().stream().mapToLong(PlayerInfo::chips).sum();
+    long totalChips = finalGame.players().stream().mapToLong(PlayerInfo::chips).sum();
     assertEquals(2000L, totalChips, "no chips should be created or destroyed by the hand");
 
     // Once the hand is over, no further action should be accepted.
@@ -107,8 +106,7 @@ class FullGamePlaythroughIT extends FacadeIT {
   }
 
   private void join(UUID gameId, String username, long buyIn) {
-    HttpEntity<Map<String, Object>> req =
-        authorized(username, Map.of("buyInAmount", buyIn));
+    HttpEntity<Map<String, Object>> req = authorized(username, Map.of("buyInAmount", buyIn));
     ResponseEntity<Void> resp =
         rest.postForEntity("/poker/games/" + gameId + "/players", req, Void.class);
     assertEquals(
