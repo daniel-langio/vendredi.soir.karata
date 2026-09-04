@@ -129,12 +129,12 @@ class FullGamePlaythroughIT extends FacadeIT {
   private void action(UUID dealId, String username, String actionType, Long amount) {
     HttpEntity<ActionRequest> req =
         authorized(username, new ActionRequest(actionType, amount, Instant.now().plusSeconds(60)));
-    ResponseEntity<Void> resp =
-        rest.postForEntity("/poker/deals/" + dealId + "/actions", req, Void.class);
+    ResponseEntity<String> resp =
+        rest.postForEntity("/poker/deals/" + dealId + "/actions", req, String.class);
     assertEquals(
         HttpStatus.NO_CONTENT,
         resp.getStatusCode(),
-        actionType + " by " + username + " should be accepted");
+        actionType + " by " + username + " should be accepted, got body: " + resp.getBody());
   }
 
   private Hand hand(UUID dealId, String username) {
