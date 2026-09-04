@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import java.time.Instant;
@@ -43,6 +44,7 @@ class PokerGameTest {
     ObjectMapper om = new ObjectMapper();
     om.registerModule(new JavaTimeModule());
     om.registerModule(new ParameterNamesModule());
+    om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
     actionMapper = new ActionMapper(om);
     gameService = new GameService(gameRepository, playerRepository, actionRepository, actionMapper);
     dealService = new DealService(gameService);
