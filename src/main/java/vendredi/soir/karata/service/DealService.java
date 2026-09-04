@@ -9,6 +9,7 @@ import vendredi.soir.karata.core.action.*;
 import vendredi.soir.karata.core.entity.*;
 import vendredi.soir.karata.endpoint.rest.exception.*;
 import vendredi.soir.karata.endpoint.rest.model.ActionRequest;
+import vendredi.soir.karata.repository.model.poker.GameEntity;
 
 @Service
 @AllArgsConstructor
@@ -79,18 +80,79 @@ public class DealService {
     }
 
     gs.saveAction(gid, did, a);
+
+    progressDealIfNeeded(g, d, gid, did);
   }
 
   @Transactional
   public void startDeal(UUID gid) {
-    gs.lockGame(gid);
+    GameEntity ge = gs.lockGame(gid);
     Game g = gs.getGame(gid);
+
+    List<Player> eligible = g.getPlayers().stream().filter(p -> g.getChips(p) > 0).toList();
+    if (eligible.size() < 2) {
+      throw new BadRequestException("At least 2 players with chips are required to start a deal");
+    }
+
     Deal d = g.startNewDeal(Deck.CLASSIC);
     UUID did = UUID.randomUUID();
     g.setCurrentDealId(did);
-    Action s = new ShuffleDeck(d.getDeck().getCards());
-    g.getDealer().execute(g, d, s);
-    gs.saveAction(gid, did, s);
+
+    Action shuffle = new ShuffleDeck(d.getDeck().getCards());
+    g.getDealer().execute(g, d, shuffle);
+    gs.saveAction(gid, did, shuffle);
+
+    Player smallBlindPlayer = eligible.get(0);
+    Player bigBlindPlayer = eligible.get(1);
+
+    Action smallBlind = new SmallBlind(smallBlindPlayer, ge.getSmallBlind());
+    g.getDealer().execute(g, d, smallBlind);
+    gs.saveAction(gid, did, smallBlind);
+
+    Action bigBlind = new BigBlind(bigBlindPlayer, ge.getBigBlind());
+    g.getDealer().execute(g, d, bigBlind);
+    gs.saveAction(gid, did, bigBlind);
+
+    for (int round = 0; round < 2; round++) {
+      for (Player p : eligible) {
+        Card card = d.nextCards(1).get(0);
+        Action holeCard = new DealHoleCard(p, card);
+        g.getDealer().execute(g, d, holeCard);
+        gs.saveAction(gid, did, holeCard);
+      }
+    }
+  }
+
+  /**
+   * Advances the deal to the next street (or triggers the showdown) once the current betting
+   * round is complete, or immediately awards the pot if every other player has folded.
+   */
+  private void progressDealIfNeeded(Game g, Deal d, UUID gid, UUID did) {
+    if ("SHOWDOWN".equals(d.getCurrentPhase())) {
+      return;
+    }
+
+    List<Player> active = g.getPlayers().stream().filter(p -> !d.hasFolded(p)).toList();
+    boolean foldedOut = active.size() <= 1;
+    if (!foldedOut && !g.getRules().isBettingRoundComplete(d, g.getPlayers())) {
+      return;
+    }
+
+    Action next;
+    if (foldedOut) {
+      next = new Showdown();
+    } else {
+      next =
+          switch (d.getCurrentPhase()) {
+            case "PRE_FLOP" -> new RevealCards(d.nextCards(3));
+            case "FLOP" -> new RevealCards(d.nextCards(1));
+            case "TURN" -> new RevealCards(d.nextCards(1));
+            default -> new Showdown(); // RIVER betting closed
+          };
+    }
+
+    g.getDealer().execute(g, d, next);
+    gs.saveAction(gid, did, next);
   }
 
   public vendredi.soir.karata.endpoint.rest.model.Hand getHand(UUID did, String user) {

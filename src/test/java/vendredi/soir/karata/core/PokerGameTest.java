@@ -88,8 +88,9 @@ class PokerGameTest {
       when(actionRepository.findByDealIdOrderByActionOrderAsc(dealId))
           .thenReturn(history.stream().filter(a -> dealId.equals(a.getDealId())).toList());
 
-      // Simulate actions: Alice Checks, Bob Checks
-      dealService.takeAction(dealId, new ActionRequest("CHECK", 0L, Instant.now().plusSeconds(60)));
+      // startDeal now auto-posts blinds (Alice=SB 10, Bob=BB 20), so Alice must call the
+      // extra 10 to match the big blind before betting can close.
+      dealService.takeAction(dealId, new ActionRequest("CALL", 10L, Instant.now().plusSeconds(60)));
       dealService.takeAction(dealId, new ActionRequest("CHECK", 0L, Instant.now().plusSeconds(60)));
 
       assertNotNull(game.getCurrentDeal());

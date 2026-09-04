@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import vendredi.soir.karata.core.action.*;
 import vendredi.soir.karata.core.entity.Card;
@@ -37,6 +38,8 @@ public class TexasHoldemRules implements Rules {
 
   @Override
   public Player determineNextPlayer(Deal deal, List<Player> players) {
+    if (deal.getHistory().stream().anyMatch(a -> a instanceof Showdown)) return null;
+
     List<Player> active = players.stream().filter(p -> !deal.hasFolded(p)).toList();
 
     if (active.isEmpty()) return null;
@@ -61,6 +64,15 @@ public class TexasHoldemRules implements Rules {
 
   @Override
   public Map<Player, Hand> evaluateWinners(Deal deal, List<Player> players) {
+    List<Player> active = players.stream().filter(p -> !deal.hasFolded(p)).toList();
+    if (active.size() == 1) {
+      // Every other player folded: the sole remaining player wins the pot uncontested,
+      // without a card-based showdown.
+      Map<Player, Hand> soleWinner = new HashMap<>();
+      soleWinner.put(active.get(0), null);
+      return soleWinner;
+    }
+
     Map<Player, Hand> bestHands = new HashMap<>();
     for (Player p : players) {
       if (!deal.hasFolded(p)) {
@@ -89,5 +101,24 @@ public class TexasHoldemRules implements Rules {
   @Override
   public List<Player> getBettingOrder(List<Player> players) {
     return players;
+  }
+
+  @Override
+  public boolean isBettingRoundComplete(Deal deal, List<Player> players) {
+    List<Player> active = players.stream().filter(p -> !deal.hasFolded(p)).toList();
+    if (active.size() <= 1) return true;
+
+    long roundBet = deal.getCurrentRoundBet();
+    Set<Player> acted =
+        deal.getActionsInCurrentPhase().stream()
+            .filter(a -> a instanceof PlayerAction)
+            .map(a -> ((PlayerAction) a).getPlayer())
+            .collect(Collectors.toSet());
+
+    for (Player p : active) {
+      if (!acted.contains(p)) return false;
+      if (deal.getPlayerRoundContribution(p) != roundBet) return false;
+    }
+    return true;
   }
 }

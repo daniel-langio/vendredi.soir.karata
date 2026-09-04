@@ -18,4 +18,6 @@ public interface Rules {
   long getMinimumRaise(Deal deal);
 
   List<Player> getBettingOrder(List<Player> players);
+
+  boolean isBettingRoundComplete(Deal deal, List<Player> players);
 }

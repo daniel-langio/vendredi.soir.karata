@@ -90,15 +90,32 @@ public class Deal {
   }
 
   public String getCurrentPhase() {
+    if (history.stream().anyMatch(a -> a instanceof Showdown)) return "SHOWDOWN";
     long revealCount = history.stream().filter(a -> a instanceof RevealCards).count();
     if (revealCount == 0) return "PRE_FLOP";
     if (revealCount == 1) return "FLOP";
     if (revealCount == 2) return "TURN";
-    if (revealCount == 3) return "RIVER";
-    return "SHOWDOWN";
+    return "RIVER";
   }
 
-  private List<Action> getActionsInCurrentPhase() {
+  public int getHoleCardsDealtCount() {
+    return (int) history.stream().filter(a -> a instanceof DealHoleCard).count();
+  }
+
+  /**
+   * Returns the next {@code count} cards to be dealt from the shuffled deck order, accounting for
+   * hole cards and community cards already dealt in this deal's history.
+   */
+  public List<Card> nextCards(int count) {
+    int consumed = getHoleCardsDealtCount() + getBoard().size();
+    List<Card> order = deck.getCards();
+    if (consumed + count > order.size()) {
+      throw new IllegalStateException("Not enough cards remaining in the deck");
+    }
+    return new ArrayList<>(order.subList(consumed, consumed + count));
+  }
+
+  public List<Action> getActionsInCurrentPhase() {
     int lastRevealIndex = -1;
     for (int i = history.size() - 1; i >= 0; i--) {
       if (history.get(i) instanceof RevealCards) {
