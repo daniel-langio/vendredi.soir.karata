@@ -2,6 +2,7 @@ package vendredi.soir.karata.endpoint.rest.controller;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -31,9 +32,10 @@ import vendredi.soir.karata.endpoint.rest.model.PlayerInfo;
 class FullGamePlaythroughIT extends FacadeIT {
 
   @Autowired private TestRestTemplate rest;
+  @Autowired private ObjectMapper objectMapper;
 
   @Test
-  void plays_a_full_heads_up_hand_end_to_end() {
+  void plays_a_full_heads_up_hand_end_to_end() throws Exception {
     UUID gameId = createGame("Full Game IT", 10, 20);
 
     join(gameId, "alice", 1000);
@@ -113,11 +115,12 @@ class FullGamePlaythroughIT extends FacadeIT {
         HttpStatus.NO_CONTENT, resp.getStatusCode(), username + " should be able to join/buy-in");
   }
 
-  private Game startDeal(UUID gameId) {
-    ResponseEntity<Game> resp =
-        rest.postForEntity("/poker/games/" + gameId + "/deals", null, Game.class);
-    assertEquals(HttpStatus.CREATED, resp.getStatusCode());
-    return resp.getBody();
+  private Game startDeal(UUID gameId) throws Exception {
+    ResponseEntity<String> resp =
+        rest.postForEntity("/poker/games/" + gameId + "/deals", null, String.class);
+    assertEquals(
+        HttpStatus.CREATED, resp.getStatusCode(), "starting deal failed, body: " + resp.getBody());
+    return objectMapper.readValue(resp.getBody(), Game.class);
   }
 
   private Game getGame(UUID gameId) {
