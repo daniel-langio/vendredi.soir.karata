@@ -67,8 +67,8 @@ class PokerGameTest {
               return pe;
             });
 
-    gameService.joinGame(gameId, "Alice", 1000L);
-    gameService.joinGame(gameId, "Bob", 1000L);
+    gameService.joinGame(gameId, "Alice", 100_000L);
+    gameService.joinGame(gameId, "Bob", 100_000L);
 
     List<ActionEntity> history = new ArrayList<>();
     when(actionRepository.findByGameIdOrderByActionOrderAsc(gameId)).thenReturn(history);
