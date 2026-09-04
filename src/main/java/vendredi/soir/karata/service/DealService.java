@@ -74,12 +74,10 @@ public class DealService {
         };
 
     try {
-      g.getDealer().execute(g, d, a);
+      saveAll(gid, did, g.getDealer().execute(g, d, a));
     } catch (IllegalArgumentException e) {
       throw new BadRequestException("Illegal move: " + e.getMessage());
     }
-
-    gs.saveAction(gid, did, a);
 
     progressDealIfNeeded(g, d, gid, did);
   }
@@ -100,26 +98,22 @@ public class DealService {
 
     d.getDeck().shuffle();
     Action shuffle = new ShuffleDeck(d.getDeck().getCards());
-    g.getDealer().execute(g, d, shuffle);
-    gs.saveAction(gid, did, shuffle);
+    saveAll(gid, did, g.getDealer().execute(g, d, shuffle));
 
     Player smallBlindPlayer = eligible.get(0);
     Player bigBlindPlayer = eligible.get(1);
 
     Action smallBlind = new SmallBlind(smallBlindPlayer, ge.getSmallBlind());
-    g.getDealer().execute(g, d, smallBlind);
-    gs.saveAction(gid, did, smallBlind);
+    saveAll(gid, did, g.getDealer().execute(g, d, smallBlind));
 
     Action bigBlind = new BigBlind(bigBlindPlayer, ge.getBigBlind());
-    g.getDealer().execute(g, d, bigBlind);
-    gs.saveAction(gid, did, bigBlind);
+    saveAll(gid, did, g.getDealer().execute(g, d, bigBlind));
 
     for (int round = 0; round < 2; round++) {
       for (Player p : eligible) {
         Card card = d.nextCards(1).get(0);
         Action holeCard = new DealHoleCard(p, card);
-        g.getDealer().execute(g, d, holeCard);
-        gs.saveAction(gid, did, holeCard);
+        saveAll(gid, did, g.getDealer().execute(g, d, holeCard));
       }
     }
   }
@@ -152,8 +146,11 @@ public class DealService {
           };
     }
 
-    g.getDealer().execute(g, d, next);
-    gs.saveAction(gid, did, next);
+    saveAll(gid, did, g.getDealer().execute(g, d, next));
+  }
+
+  private void saveAll(UUID gid, UUID did, List<Action> actions) {
+    actions.forEach(a -> gs.saveAction(gid, did, a));
   }
 
   public vendredi.soir.karata.endpoint.rest.model.Hand getHand(UUID did, String user) {
