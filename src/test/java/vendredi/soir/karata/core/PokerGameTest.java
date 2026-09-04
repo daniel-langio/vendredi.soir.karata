@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +42,7 @@ class PokerGameTest {
     MockitoAnnotations.openMocks(this);
     ObjectMapper om = new ObjectMapper();
     om.registerModule(new JavaTimeModule());
+    om.registerModule(new ParameterNamesModule());
     actionMapper = new ActionMapper(om);
     gameService = new GameService(gameRepository, playerRepository, actionRepository, actionMapper);
     dealService = new DealService(gameService);

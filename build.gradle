@@ -36,6 +36,13 @@ configurations {
     }
 }
 
+tasks.withType(JavaCompile).configureEach {
+    // Required for Jackson (via jackson-module-parameter-names) to resolve constructor
+    // parameter names by reflection when deserializing classes with no @JsonCreator/
+    // @JsonProperty hints (e.g. Player and the core.action classes).
+    options.compilerArgs += ['-parameters']
+}
+
 
 
 
