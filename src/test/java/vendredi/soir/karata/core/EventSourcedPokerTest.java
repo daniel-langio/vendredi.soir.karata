@@ -42,7 +42,7 @@ class EventSourcedPokerTest {
     Deal deal = game.startNewDeal(Deck.CLASSIC);
 
     // 3. Shuffle and Deal
-    dealer.execute(game, deal, new ShuffleDeck());
+    dealer.execute(game, deal, new ShuffleDeck(deal.getDeck().getCards()));
 
     Card aliceCard1 = deal.getDeck().draw();
     dealer.execute(game, deal, new DealHoleCard(alice, aliceCard1));

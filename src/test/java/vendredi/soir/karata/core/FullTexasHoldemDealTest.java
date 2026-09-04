@@ -25,7 +25,7 @@ class FullTexasHoldemDealTest {
 
     // 3. Start Deal
     Deal deal = game.startNewDeal(Deck.CLASSIC);
-    dealer.execute(game, deal, new ShuffleDeck());
+    dealer.execute(game, deal, new ShuffleDeck(deal.getDeck().getCards()));
 
     // 4. Blinds
     dealer.execute(game, deal, new SmallBlind(alice, 10));
