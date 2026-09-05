@@ -15,7 +15,12 @@ import vendredi.soir.karata.repository.model.poker.GameEntity;
 @Service
 @AllArgsConstructor
 public class DealService {
-  public static final Duration TURN_TIMEOUT = Duration.ofSeconds(30);
+  // Generous on purpose: this only exists to stop an AFK player from stalling the table forever,
+  // not to enforce a competitive pace - real people coordinating across two separate browser
+  // windows/devices, with no on-screen urgency warning as the clock runs down, can easily need
+  // more than 30s to notice it's their turn and act (confirmed live: a 30s window auto-folded a
+  // real test player who was just reading the board).
+  public static final Duration TURN_TIMEOUT = Duration.ofSeconds(120);
 
   private final GameService gs;
 

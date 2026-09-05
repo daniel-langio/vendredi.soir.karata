@@ -172,9 +172,9 @@ components:
           nullable: true
           description: |
             Server-computed deadline for activePlayerId to act, derived from the last action taken
-            on this deal plus a fixed 30s window. Null once there is no active player (e.g. past
-            showdown). If a player's turn reaches this deadline without them acting, the server
-            auto-folds them the next time this game is read or acted on.
+            on this deal plus a fixed window (DealService.TURN_TIMEOUT). Null once there is no
+            active player (e.g. past showdown). If a player's turn reaches this deadline without
+            them acting, the server auto-folds them the next time this game is read or acted on.
       required:
         - dealId
         - communityCards
