@@ -1,15 +1,44 @@
 package vendredi.soir.karata.endpoint.rest.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.NoSuchElementException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import vendredi.soir.karata.endpoint.rest.exception.*;
 import vendredi.soir.karata.endpoint.rest.model.Error;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+  /**
+   * The web-ui SPA (static resources) uses real per-page paths (e.g. /table/{gameId}) via
+   * Flutter's path URL strategy - refreshing or opening one of those paths directly hits this
+   * server first, before any client-side routing can run, and Spring's static resource handler
+   * throws this exception for anything that isn't an actual file. Forward those cases to
+   * index.html instead so the SPA loads and its own router takes over; genuine API/health 404s
+   * are untouched. This has to be declared here (rather than in a separate advice class) so
+   * Spring's per-class most-specific-exception-wins resolution picks it over handleGeneric below
+   * - exception-handler priority across *different* advice beans is resolved by bean iteration
+   * order, not specificity, so a separate class could lose to the catch-all non-deterministically.
+   */
+  @ExceptionHandler(NoResourceFoundException.class)
+  public void handleMissingStaticResource(
+      NoResourceFoundException e, HttpServletRequest request, HttpServletResponse response)
+      throws Exception {
+    String path = request.getRequestURI();
+    boolean isApiOrHealthPath =
+        path.startsWith("/poker") || path.equals("/ping") || path.startsWith("/health");
+
+    if (isApiOrHealthPath) {
+      response.sendError(HttpStatus.NOT_FOUND.value(), e.getMessage());
+      return;
+    }
+    request.getRequestDispatcher("/index.html").forward(request, response);
+  }
 
   @ExceptionHandler(BadRequestException.class)
   public ResponseEntity<Error> handleBadRequest(BadRequestException e) {
