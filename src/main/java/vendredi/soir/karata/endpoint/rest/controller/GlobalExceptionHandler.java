@@ -15,15 +15,15 @@ import vendredi.soir.karata.endpoint.rest.model.Error;
 public class GlobalExceptionHandler {
 
   /**
-   * The web-ui SPA (static resources) uses real per-page paths (e.g. /table/{gameId}) via
-   * Flutter's path URL strategy - refreshing or opening one of those paths directly hits this
-   * server first, before any client-side routing can run, and Spring's static resource handler
-   * throws this exception for anything that isn't an actual file. Forward those cases to
-   * index.html instead so the SPA loads and its own router takes over; genuine API/health 404s
-   * are untouched. This has to be declared here (rather than in a separate advice class) so
-   * Spring's per-class most-specific-exception-wins resolution picks it over handleGeneric below
-   * - exception-handler priority across *different* advice beans is resolved by bean iteration
-   * order, not specificity, so a separate class could lose to the catch-all non-deterministically.
+   * The web-ui SPA (static resources) uses real per-page paths (e.g. /table/{gameId}) via Flutter's
+   * path URL strategy - refreshing or opening one of those paths directly hits this server first,
+   * before any client-side routing can run, and Spring's static resource handler throws this
+   * exception for anything that isn't an actual file. Forward those cases to index.html instead so
+   * the SPA loads and its own router takes over; genuine API/health 404s are untouched. This has to
+   * be declared here (rather than in a separate advice class) so Spring's per-class
+   * most-specific-exception-wins resolution picks it over handleGeneric below - exception-handler
+   * priority across *different* advice beans is resolved by bean iteration order, not specificity,
+   * so a separate class could lose to the catch-all non-deterministically.
    */
   @ExceptionHandler(NoResourceFoundException.class)
   public void handleMissingStaticResource(
