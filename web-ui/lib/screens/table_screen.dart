@@ -37,6 +37,12 @@ class _TableScreenState extends State<TableScreen> {
   String? _selectedActionType; // 'BET' or 'RAISE' while the sizer is open
   int _sizerAmount = 0;
 
+  // Purely cosmetic bookkeeping for the turn countdown's progress bar - the deadline itself
+  // (_turnDeadline) is always the server's authoritative value; this just remembers when we
+  // first observed the current turn so the bar has a start point to animate from.
+  String? _turnWindowKey;
+  DateTime? _turnWindowStart;
+
   @override
   void initState() {
     super.initState();
@@ -61,12 +67,6 @@ class _TableScreenState extends State<TableScreen> {
   String? get _activePlayerId => _currentDeal?['activePlayerId']?.toString();
   Map<String, dynamic>? get _you => _game?['you'] as Map<String, dynamic>?;
   List<dynamic> get _players => _game?['players'] as List<dynamic>? ?? [];
-  List<dynamic> get _opponents =>
-      _players.where((p) => p['username'] != widget.username).toList();
-  Map<String, dynamic>? get _me => _players.firstWhere(
-        (p) => p['username'] == widget.username,
-        orElse: () => null,
-      ) as Map<String, dynamic>?;
   bool get _isClosed => _game?['closed'] == true;
   bool get _isMyTurn {
     final me = _players.firstWhere((p) => p['username'] == widget.username, orElse: () => null);
@@ -192,7 +192,11 @@ class _TableScreenState extends State<TableScreen> {
     }
   }
 
-  void _openSizer(String type) {
+  void _toggleSizer(String type) {
+    if (_selectedActionType == type) {
+      setState(() => _selectedActionType = null);
+      return;
+    }
     final you = _you;
     final minRaise = (you?['minRaise'] as num?)?.toInt() ?? 20;
     setState(() {
@@ -216,7 +220,8 @@ class _TableScreenState extends State<TableScreen> {
     return Scaffold(
       backgroundColor: KarataColors.bg,
       appBar: AppBar(
-        title: Text(_isClosed ? '$gameName (closed)' : gameName),
+        title: Text(_isClosed ? '$gameName (closed)' : gameName,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: KarataColors.dim)),
         actions: [
           IconButton(
             icon: const Icon(Icons.ios_share, size: 20),
@@ -239,8 +244,8 @@ class _TableScreenState extends State<TableScreen> {
               child: Row(
                 children: [
                   Icon(Icons.circle,
-                      size: 7, color: _isStale ? KarataColors.stale : KarataColors.live),
-                  const SizedBox(width: 6),
+                      size: 6, color: _isStale ? KarataColors.stale : KarataColors.live),
+                  const SizedBox(width: 7),
                   Text(_liveStatusLabel(),
                       style: const TextStyle(fontSize: 11.5, color: KarataColors.dim)),
                 ],
@@ -251,129 +256,57 @@ class _TableScreenState extends State<TableScreen> {
       ),
       body: Stack(
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                flex: 5,
-                child: Container(
-                  margin: const EdgeInsets.all(8),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF14210E),
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: const Color(0xFF3E2A1A), width: 8),
-                  ),
-                  child: Stack(
-                    children: [
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('POT: $pot CHIPS',
-                              style: const TextStyle(
-                                  color: KarataColors.chipInk,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2)),
-                          const SizedBox(height: 6),
-                          if (_phase.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.black38,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(_phase,
-                                  style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: communityCards
-                                .map((c) => Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                                      child: PokerCardWidget(cardCode: c?.toString()),
-                                    ))
-                                .toList(),
-                          ),
-                          if (outcome != null) ...[
-                            const SizedBox(height: 14),
-                            _OutcomeBanner(outcome: outcome),
-                          ],
-                        ],
-                      ),
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        child: Column(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: _players
+                      .map((p) => _SeatWidget(
+                            player: p as Map<String, dynamic>,
+                            activePlayerId: _activePlayerId,
+                          ))
+                      .toList(),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _BoardRow(cards: communityCards),
+                        const SizedBox(height: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            SizedBox(
-                              height: 90,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                itemCount: _opponents.length,
-                                itemBuilder: (context, idx) => _SeatCard(
-                                  player: _opponents[idx] as Map<String, dynamic>,
-                                  activePlayerId: _activePlayerId,
-                                  myUsername: widget.username,
-                                ),
-                              ),
-                            ),
-                            if (_isMyTurn && outcome == null && !_isClosed)
-                              const Padding(
-                                padding: EdgeInsets.only(top: 4),
-                                child: _YourTurnBadge(),
-                              ),
+                            const Text('Pot',
+                                style: TextStyle(fontSize: 11.5, color: KarataColors.dim)),
+                            Text(pot,
+                                style: const TextStyle(
+                                    fontSize: 22, color: KarataColors.ink, fontWeight: FontWeight.w400)),
                           ],
                         ),
-                      ),
-                    ],
+                        if (outcome != null) ...[
+                          const SizedBox(height: 14),
+                          _OutcomeBanner(outcome: outcome),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(
-                height: 95,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  itemCount: _me != null ? 1 : 0,
-                  itemBuilder: (context, idx) => _SeatCard(
-                    player: _me!,
-                    activePlayerId: _activePlayerId,
-                    myUsername: widget.username,
-                  ),
-                ),
-              ),
-              Container(
-                color: const Color(0xFF212121),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Row(
-                  children: [
-                    const Text('MY HAND:',
-                        style: TextStyle(
-                            color: KarataColors.ink, fontWeight: FontWeight.bold, fontSize: 13)),
-                    const SizedBox(width: 12),
-                    if (_myCards.isEmpty)
-                      const Text('Waiting for deal...',
-                          style: TextStyle(color: KarataColors.dim, fontSize: 13))
-                    else
-                      ..._myCards.map((c) => Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: PokerCardWidget(cardCode: c?.toString(), width: 40, height: 56),
-                          )),
-                    const Spacer(),
-                    const _MadeHandBadge(),
-                  ],
-                ),
-              ),
-              _buildTurnLine(),
-              _buildActionArea(),
-            ],
+                SizedBox(height: 18, child: _buildTurnLine()),
+                const SizedBox(height: 10),
+                if (_selectedActionType != null) ...[
+                  _buildSizer(),
+                  const SizedBox(height: 11),
+                ],
+                _buildActionArea(),
+                const SizedBox(height: 22),
+                _buildHandRow(),
+              ],
+            ),
           ),
           if (_isLoading)
             Container(
@@ -397,18 +330,25 @@ class _TableScreenState extends State<TableScreen> {
     if (_isClosed || _dealId.isEmpty || _phase == 'SHOWDOWN') return const SizedBox();
 
     if (_isMyTurn && _turnDeadline != null) {
-      final remaining = _turnDeadline!.difference(DateTime.now()).inSeconds;
+      final deadline = _turnDeadline!;
+      final key = '$_dealId:$_phase:$_activePlayerId';
+      if (_turnWindowKey != key) {
+        _turnWindowKey = key;
+        _turnWindowStart = DateTime.now();
+      }
+      final remaining = deadline.difference(DateTime.now()).inSeconds;
       final secs = remaining > 0 ? remaining : 0;
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: Row(
-          children: [
-            const Icon(Icons.timer_outlined, size: 14, color: KarataColors.dim),
-            const SizedBox(width: 6),
-            Text('Your turn — ${secs}s left',
-                style: const TextStyle(fontSize: 13, color: KarataColors.dim)),
-          ],
-        ),
+      final totalMs = deadline.difference(_turnWindowStart!).inMilliseconds;
+      final elapsedMs = DateTime.now().difference(_turnWindowStart!).inMilliseconds;
+      final fraction = totalMs > 0 ? (elapsedMs / totalMs).clamp(0.0, 1.0) : 1.0;
+
+      return Row(
+        children: [
+          _ClockBar(fraction: fraction),
+          const SizedBox(width: 8),
+          Text('Your turn — ${secs}s left',
+              style: const TextStyle(fontSize: 13, color: KarataColors.dim)),
+        ],
       );
     }
 
@@ -417,17 +357,16 @@ class _TableScreenState extends State<TableScreen> {
       orElse: () => null,
     );
     if (active == null) return const SizedBox();
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Text('Waiting on ${active['username']}',
-          style: const TextStyle(fontSize: 13, color: KarataColors.dim)),
-    );
+    return Text('Waiting on ${active['username']}',
+        style: const TextStyle(fontSize: 13, color: KarataColors.dim));
   }
 
   Widget _buildActionArea() {
     if (_isClosed) {
-      return _ActionBarContainer(
-        child: const Center(
+      return const SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: Center(
           child: Text('THIS TABLE IS CLOSED',
               style: TextStyle(
                   color: KarataColors.dim,
@@ -439,88 +378,66 @@ class _TableScreenState extends State<TableScreen> {
     }
 
     if (_dealId.isEmpty) {
-      return _ActionBarContainer(
-        child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(onPressed: _startHand, child: const Text('Start the hand')),
-        ),
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(onPressed: _startHand, child: const Text('Start the hand')),
       );
     }
 
     if (_phase == 'SHOWDOWN') {
-      return _ActionBarContainer(
-        child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(onPressed: _startHand, child: const Text('Next hand')),
-        ),
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(onPressed: _startHand, child: const Text('Next hand')),
       );
     }
 
-    if (_selectedActionType != null) {
-      return _buildSizer();
-    }
-
-    if (!_isMyTurn) {
-      return _ActionBarContainer(
-        child: const Center(
-          child: Text('WAITING FOR OTHER PLAYERS...',
-              style: TextStyle(
-                  color: KarataColors.dim,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  letterSpacing: 1.1)),
-        ),
-      );
-    }
-
+    final mine = _isMyTurn;
     final you = _you;
     final callAmount = (you?['callAmount'] as num?)?.toInt() ?? 0;
     final minRaise = (you?['minRaise'] as num?)?.toInt() ?? 20;
     final currentRoundBet = (_currentDeal?['currentRoundBet'] as num?)?.toInt() ?? 0;
-    final callLabel = callAmount == 0 ? 'Check' : 'Call $callAmount';
-    final raiseLabel = currentRoundBet == 0 ? 'Bet $minRaise' : 'Raise $minRaise';
     final raiseType = currentRoundBet == 0 ? 'BET' : 'RAISE';
+    final sizerOpen = _selectedActionType == raiseType;
+    final raiseAmount = sizerOpen ? _sizerAmount : minRaise;
+    final callLabel = callAmount == 0 ? 'Check' : 'Call $callAmount';
+    final raiseLabel = '${currentRoundBet == 0 ? 'Bet' : 'Raise'} $raiseAmount';
 
-    return _ActionBarContainer(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _actionBtn('Fold', KarataColors.red, () => _submitAction('FOLD')),
-          _actionBtn(
-            callLabel,
-            KarataColors.live,
-            () => callAmount == 0
-                ? _submitAction('CHECK')
-                : _submitAction('CALL', amount: callAmount),
+    return Row(
+      children: [
+        Expanded(
+          child: _ActBtn(
+            label: 'Fold',
+            enabled: mine,
+            onPressed: () => _submitAction('FOLD'),
           ),
-          _actionBtn(raiseLabel, KarataColors.chipInk, () => _submitAction(raiseType, amount: minRaise)),
-          IconButton(
-            onPressed: () => _openSizer(raiseType),
-            icon: const Icon(Icons.arrow_upward, color: KarataColors.ink),
-            style: IconButton.styleFrom(
-              backgroundColor: KarataColors.pill,
-              shape: const CircleBorder(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _actionBtn(String label, Color color, VoidCallback onPressed) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 3),
-        child: ElevatedButton(
-          onPressed: onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: KarataColors.pill,
-            foregroundColor: color,
-            minimumSize: const Size.fromHeight(48),
-          ),
-          child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
         ),
-      ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: _ActBtn(
+            label: callLabel,
+            enabled: mine,
+            solid: mine,
+            onPressed: () =>
+                callAmount == 0 ? _submitAction('CHECK') : _submitAction('CALL', amount: callAmount),
+          ),
+        ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: _ActBtn(
+            label: raiseLabel,
+            enabled: mine,
+            onPressed: () => sizerOpen
+                ? _submitAction(raiseType, amount: _sizerAmount)
+                : _submitAction(raiseType, amount: minRaise),
+          ),
+        ),
+        const SizedBox(width: 9),
+        _BumpBtn(
+          on: sizerOpen,
+          enabled: mine,
+          onPressed: () => _toggleSizer(raiseType),
+        ),
+      ],
     );
   }
 
@@ -533,31 +450,45 @@ class _TableScreenState extends State<TableScreen> {
     final minRaise = rawMinRaise <= rawMaxRaise ? rawMinRaise : rawMaxRaise;
     final maxRaise = rawMaxRaise;
     final pot = (_currentDeal?['pot'] as num?)?.toInt() ?? 0;
-    final type = _selectedActionType!;
 
     int clampAmount(int v) => v.clamp(minRaise, maxRaise);
 
-    return _ActionBarContainer(
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: KarataColors.pillLine),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: [
-              Text('$type AMOUNT: $_sizerAmount',
+              Text('$_sizerAmount',
                   style: const TextStyle(
-                      color: KarataColors.chipInk, fontWeight: FontWeight.bold, fontSize: 14)),
-              TextButton(
-                onPressed: () => setState(() => _selectedActionType = null),
-                child: const Text('Back', style: TextStyle(color: KarataColors.red)),
-              ),
+                      fontSize: 32, fontWeight: FontWeight.w300, color: KarataColors.ink)),
+              Text('min $minRaise · all in $maxRaise',
+                  style: const TextStyle(fontSize: 11.5, color: KarataColors.dim)),
             ],
           ),
-          Slider(
-            value: clampAmount(_sizerAmount).toDouble(),
-            min: minRaise.toDouble(),
-            max: maxRaise > minRaise ? maxRaise.toDouble() : minRaise.toDouble() + 1,
-            activeColor: KarataColors.chipInk,
-            onChanged: (v) => setState(() => _sizerAmount = v.round()),
+          const SizedBox(height: 16),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 3,
+              activeTrackColor: KarataColors.ink,
+              inactiveTrackColor: const Color(0xFF26242B),
+              thumbColor: KarataColors.ink,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+              overlayShape: SliderComponentShape.noOverlay,
+            ),
+            child: Slider(
+              value: clampAmount(_sizerAmount).toDouble(),
+              min: minRaise.toDouble(),
+              max: maxRaise > minRaise ? maxRaise.toDouble() : minRaise.toDouble() + 1,
+              onChanged: (v) => setState(() => _sizerAmount = v.round()),
+            ),
           ),
           Row(
             children: [
@@ -567,16 +498,6 @@ class _TableScreenState extends State<TableScreen> {
               _quickBtn(
                   'All in', _sizerAmount == maxRaise, () => setState(() => _sizerAmount = maxRaise)),
             ],
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => _submitAction(type, amount: _sizerAmount),
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: KarataColors.chipInk, foregroundColor: Colors.black),
-              child: Text('CONFIRM $type'),
-            ),
           ),
         ],
       ),
@@ -591,6 +512,7 @@ class _TableScreenState extends State<TableScreen> {
           onPressed: onPressed,
           style: OutlinedButton.styleFrom(
             minimumSize: const Size.fromHeight(34),
+            side: const BorderSide(color: KarataColors.pillLine),
             backgroundColor: on ? KarataColors.pill : null,
             foregroundColor: on ? KarataColors.ink : KarataColors.dim,
           ),
@@ -599,63 +521,294 @@ class _TableScreenState extends State<TableScreen> {
       ),
     );
   }
-}
 
-class _ActionBarContainer extends StatelessWidget {
-  final Widget child;
-  const _ActionBarContainer({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xFF121212),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-      child: child,
-    );
-  }
-}
-
-class _YourTurnBadge extends StatelessWidget {
-  const _YourTurnBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(top: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFB8860B),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
+  Widget _buildHandRow() {
+    return SizedBox(
+      height: 132,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Icon(Icons.star, size: 16, color: Colors.white),
-          SizedBox(width: 4),
-          Text('YOUR TURN TO ACT!',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+          Expanded(
+            child: _myCards.isEmpty
+                ? Row(children: const [_MutedHoleCard(), SizedBox(width: 0), _MutedHoleCard()])
+                : Stack(
+                    children: [
+                      for (var i = 0; i < _myCards.length; i++)
+                        Positioned(
+                          left: i * 76.0,
+                          child: PokerCardWidget(
+                            cardCode: _myCards[i]?.toString(),
+                            width: 92,
+                            height: 124,
+                            rankFontSize: 34,
+                            suitFontSize: 26,
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
+          const SizedBox(width: 12),
+          const _MadeHandBox(),
         ],
       ),
     );
   }
 }
 
-class _MadeHandBadge extends StatelessWidget {
-  const _MadeHandBadge();
+class _SeatWidget extends StatelessWidget {
+  final Map<String, dynamic> player;
+  final String? activePlayerId;
+
+  const _SeatWidget({required this.player, required this.activePlayerId});
+
+  @override
+  Widget build(BuildContext context) {
+    final playerId = player['playerId']?.toString();
+    final username = player['username']?.toString() ?? 'Player';
+    final chips = player['chips']?.toString() ?? '0';
+    final status = player['status']?.toString() ?? 'ACTIVE';
+    final blind = player['blind']?.toString();
+    final lastAction = player['lastAction']?.toString();
+    final contribution = (player['contributionThisRound'] as num?)?.toInt() ?? 0;
+    final isActive = activePlayerId != null && activePlayerId == playerId;
+    final isFolded = status == 'FOLDED';
+    final isAllIn = status == 'ALL_IN';
+    final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
+
+    return Opacity(
+      opacity: isFolded ? 0.26 : 1,
+      child: SizedBox(
+        width: 64,
+        child: Column(
+          children: [
+            if (lastAction != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(lastAction,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 8, fontWeight: FontWeight.bold, color: KarataColors.dim)),
+              ),
+            SizedBox(
+              width: 64,
+              height: 46,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF221F28),
+                        shape: BoxShape.circle,
+                        border: isActive ? Border.all(color: KarataColors.ink, width: 2) : null,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(initial,
+                          style: const TextStyle(
+                              fontSize: 18, color: KarataColors.ink, fontWeight: FontWeight.w500)),
+                    ),
+                  ),
+                  if (blind != null || isAllIn)
+                    Positioned(
+                      top: 0,
+                      right: -1,
+                      child: Container(
+                        height: 16,
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
+                        decoration: BoxDecoration(
+                          color: isAllIn ? KarataColors.allInBg : const Color(0xFF2E2C34),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          isAllIn ? 'ALL' : (blind == 'SMALL' ? 'SB' : 'BB'),
+                          style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: isAllIn ? KarataColors.allInInk : KarataColors.ink),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 7),
+            Text(username,
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11, color: KarataColors.dim)),
+            Text(chips,
+                style: const TextStyle(
+                    fontSize: 15, color: KarataColors.ink, fontWeight: FontWeight.w500)),
+            if (contribution > 0)
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                height: 22,
+                padding: const EdgeInsets.symmetric(horizontal: 7),
+                decoration: BoxDecoration(
+                  color: KarataColors.chipBg,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                alignment: Alignment.center,
+                child: Text('$contribution',
+                    style: const TextStyle(
+                        color: KarataColors.chipInk, fontSize: 10.5, fontWeight: FontWeight.w600)),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BoardRow extends StatelessWidget {
+  final List<dynamic> cards;
+  const _BoardRow({required this.cards});
+
+  @override
+  Widget build(BuildContext context) {
+    const cardWidth = 64.0;
+    const step = 58.0; // cardWidth - 6px overlap, matching the mockup
+    final width = cardWidth + step * (cards.length - 1);
+    return SizedBox(
+      width: width,
+      height: 86,
+      child: Stack(
+        children: [
+          for (var i = 0; i < cards.length; i++)
+            Positioned(
+              left: i * step,
+              child: PokerCardWidget(cardCode: cards[i]?.toString()),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActBtn extends StatelessWidget {
+  final String label;
+  final bool enabled;
+  final bool solid;
+  final VoidCallback onPressed;
+
+  const _ActBtn({
+    required this.label,
+    required this.enabled,
+    required this.onPressed,
+    this.solid = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: OutlinedButton(
+        onPressed: enabled ? onPressed : null,
+        style: OutlinedButton.styleFrom(
+          backgroundColor: solid ? KarataColors.pill : Colors.transparent,
+          side: BorderSide(color: solid ? Colors.transparent : KarataColors.pillLine),
+          foregroundColor: KarataColors.ink,
+          disabledForegroundColor: KarataColors.ink.withValues(alpha: 0.3),
+          disabledBackgroundColor: solid ? KarataColors.pill.withValues(alpha: 0.3) : null,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+        ),
+        child: Text(label,
+            style: const TextStyle(fontSize: 14.5), overflow: TextOverflow.ellipsis, maxLines: 1),
+      ),
+    );
+  }
+}
+
+class _BumpBtn extends StatelessWidget {
+  final bool on;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  const _BumpBtn({required this.on, required this.enabled, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: OutlinedButton(
+        onPressed: enabled ? onPressed : null,
+        style: OutlinedButton.styleFrom(
+          padding: EdgeInsets.zero,
+          backgroundColor: on ? KarataColors.pill : Colors.transparent,
+          side: BorderSide(color: on ? Colors.transparent : KarataColors.pillLine),
+          foregroundColor: KarataColors.ink,
+          disabledForegroundColor: KarataColors.ink.withValues(alpha: 0.3),
+          shape: const CircleBorder(),
+        ),
+        child: const Icon(Icons.arrow_upward, size: 16),
+      ),
+    );
+  }
+}
+
+class _ClockBar extends StatelessWidget {
+  final double fraction;
+  const _ClockBar({required this.fraction});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(2),
+      child: SizedBox(
+        width: 30,
+        height: 3,
+        child: Stack(
+          children: [
+            Container(color: const Color(0xFF26242B)),
+            FractionallySizedBox(
+              widthFactor: 1 - fraction,
+              child: Container(color: KarataColors.ink),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MadeHandBox extends StatelessWidget {
+  const _MadeHandBox();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 130,
-      height: 56,
+      width: 150,
+      height: 124,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         border: Border.all(color: KarataColors.pillLine),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(15),
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       child: const Text('Hand strength\navailable soon',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 11, color: KarataColors.dim)),
+          style: TextStyle(fontSize: 12.5, color: KarataColors.dim)),
+    );
+  }
+}
+
+class _MutedHoleCard extends StatelessWidget {
+  const _MutedHoleCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 92,
+      height: 124,
+      margin: const EdgeInsets.only(right: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: const Color(0xFF201E25)),
+        borderRadius: BorderRadius.circular(15),
+      ),
     );
   }
 }
@@ -671,7 +824,10 @@ class _OutcomeBanner extends StatelessWidget {
     final names = winners.map((w) => w['username']).join(' & ');
     final total = winners.fold<int>(0, (sum, w) => sum + ((w['amount'] as num?)?.toInt() ?? 0));
     final rank = (winners.first as Map<String, dynamic>)['handRank'] as String?;
-    return Column(
+    return Wrap(
+      alignment: WrapAlignment.end,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 9,
       children: [
         Text('💰 $names won $total',
             style: const TextStyle(
@@ -683,137 +839,37 @@ class _OutcomeBanner extends StatelessWidget {
   }
 }
 
-class _SeatCard extends StatelessWidget {
-  final Map<String, dynamic> player;
-  final String? activePlayerId;
-  final String myUsername;
-
-  const _SeatCard({required this.player, required this.activePlayerId, required this.myUsername});
-
-  @override
-  Widget build(BuildContext context) {
-    final playerId = player['playerId']?.toString();
-    final username = player['username']?.toString() ?? 'Player';
-    final chips = player['chips']?.toString() ?? '0';
-    final status = player['status']?.toString() ?? 'ACTIVE';
-    final blind = player['blind']?.toString();
-    final lastAction = player['lastAction']?.toString();
-    final contribution = (player['contributionThisRound'] as num?)?.toInt() ?? 0;
-    final isActive = activePlayerId != null && activePlayerId == playerId;
-    final isMe = username == myUsername;
-    final isFolded = status == 'FOLDED';
-    final isAllIn = status == 'ALL_IN';
-
-    return Opacity(
-      opacity: isFolded ? 0.35 : 1,
-      child: Container(
-        width: 112,
-        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        decoration: BoxDecoration(
-          color: isMe ? const Color(0xFF2A1A40) : const Color(0xFF221F28),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isActive ? const Color(0xFFB8860B) : Colors.transparent,
-            width: isActive ? 2.5 : 1,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (lastAction != null)
-              Container(
-                margin: const EdgeInsets.only(bottom: 3),
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF33313A),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(lastAction,
-                    style: const TextStyle(
-                        fontSize: 8, fontWeight: FontWeight.bold, color: KarataColors.dim)),
-              ),
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                Text(isMe ? '$username (You)' : username,
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: KarataColors.ink,
-                        fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
-                        fontSize: 11)),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.circle, size: 9, color: KarataColors.chipInk),
-                const SizedBox(width: 3),
-                Text(chips,
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            if (blind != null || isAllIn)
-              Padding(
-                padding: const EdgeInsets.only(top: 3),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: isAllIn ? KarataColors.allInBg : const Color(0xFF2E2C34),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    isAllIn ? 'ALL IN' : (blind == 'SMALL' ? 'SB' : 'BB'),
-                    style: TextStyle(
-                        fontSize: 8,
-                        fontWeight: FontWeight.bold,
-                        color: isAllIn ? KarataColors.allInInk : KarataColors.ink),
-                  ),
-                ),
-              ),
-            if (contribution > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: KarataColors.chipBg,
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  child: Text('$contribution',
-                      style: const TextStyle(
-                          color: KarataColors.chipInk, fontSize: 10.5, fontWeight: FontWeight.bold)),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class PokerCardWidget extends StatelessWidget {
   final String? cardCode;
   final double width;
   final double height;
+  final double rankFontSize;
+  final double suitFontSize;
 
-  const PokerCardWidget({super.key, this.cardCode, this.width = 50, this.height = 70});
+  const PokerCardWidget({
+    super.key,
+    this.cardCode,
+    this.width = 64,
+    this.height = 86,
+    this.rankFontSize = 24,
+    this.suitFontSize = 19,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(width > 80 ? 15 : 11);
     if (cardCode == null) {
+      // A card slot that exists but hasn't been revealed yet - a face-down card, not an empty
+      // one, since the API always sends a fixed-size community-card array padded with nulls.
       return Container(
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: const Color(0xFF8B1E2E),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: KarataColors.ink, width: 2),
+          color: KarataColors.card,
+          borderRadius: radius,
+          border: Border.all(color: KarataColors.bg, width: 2),
         ),
-        child: const Center(child: Icon(Icons.help_outline, color: KarataColors.ink, size: 20)),
+        child: ClipRRect(borderRadius: radius, child: CustomPaint(painter: _CardBackPainter())),
       );
     }
 
@@ -825,36 +881,46 @@ class PokerCardWidget extends StatelessWidget {
     const suitSymbols = {'c': '♣', 'd': '♦', 'h': '♥', 's': '♠'};
     const redSuits = {'d', 'h'};
     final suitSymbol = suitSymbols[suitChar] ?? '?';
-    final suitColor = redSuits.contains(suitChar) ? KarataColors.red : Colors.black;
+    final suitColor = redSuits.contains(suitChar) ? KarataColors.red : KarataColors.cardInk;
 
     return Container(
       width: width,
       height: height,
+      padding: const EdgeInsets.only(top: 7, left: 8),
       decoration: BoxDecoration(
         color: KarataColors.card,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.grey.shade400),
+        borderRadius: radius,
+        border: Border.all(color: KarataColors.bg, width: 2),
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned(
-            top: 4,
-            left: 4,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(rank,
-                    style: TextStyle(color: suitColor, fontSize: 14, fontWeight: FontWeight.bold)),
-                Text(suitSymbol, style: TextStyle(color: suitColor, fontSize: 12)),
-              ],
-            ),
-          ),
-          Center(
-            child: Text(suitSymbol,
-                style: TextStyle(color: suitColor.withValues(alpha: 0.15), fontSize: 28)),
-          ),
+          Text(rank,
+              style: TextStyle(
+                  color: suitColor,
+                  fontSize: rank.length > 1 ? rankFontSize * 0.8 : rankFontSize,
+                  height: 1,
+                  fontWeight: FontWeight.w500)),
+          Text(suitSymbol, style: TextStyle(color: suitColor, fontSize: suitFontSize, height: 1)),
         ],
       ),
     );
   }
+}
+
+class _CardBackPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFCBC9C5)
+      ..strokeWidth = 4;
+    const gap = 9.0;
+    final diag = size.width + size.height;
+    for (double x = -size.height; x < diag; x += gap) {
+      canvas.drawLine(Offset(x, 0), Offset(x + size.height, size.height), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
