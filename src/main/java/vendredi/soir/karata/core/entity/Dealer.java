@@ -38,7 +38,7 @@ public class Dealer {
   }
 
   private List<Action> handleShowdown(Game game, Deal deal) {
-    Map<Player, Hand> winners = rules.evaluateWinners(deal, game.getPlayers());
+    Map<Player, Hand> winners = rules.evaluateWinners(deal, deal.filterDealtIn(game.getPlayers()));
     if (winners.isEmpty()) {
       return List.of();
     }

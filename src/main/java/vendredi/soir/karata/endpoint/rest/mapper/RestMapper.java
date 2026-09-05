@@ -50,7 +50,8 @@ public class RestMapper {
     List<String> communityCards = new ArrayList<>(5);
     for (int i = 0; i < 5; i++)
       communityCards.add(i < deal.getBoard().size() ? deal.getBoard().get(i).toString() : null);
-    Player activePlayer = game.getRules().determineNextPlayer(deal, game.getPlayers());
+    Player activePlayer =
+        game.getRules().determineNextPlayer(deal, deal.filterDealtIn(game.getPlayers()));
     return new DealState(
         dealId,
         communityCards,
@@ -66,16 +67,34 @@ public class RestMapper {
       vendredi.soir.karata.core.entity.Game game,
       GameEntity entity,
       String requestingUsername,
-      Instant turnDeadline) {
+      Instant turnDeadline,
+      Set<String> activeUsernames) {
     UUID currentDealId = game.getCurrentDealId();
+    Deal deal = game.getCurrentDeal();
+    boolean handInProgress = deal != null && !"SHOWDOWN".equals(deal.getCurrentPhase());
+
+    List<PlayerInfo> players =
+        game.getPlayers().stream()
+            // A player who has left stays visible only while still contesting a hand they were
+            // already dealt into (e.g. all-in when they left, so leaving didn't fold them out) -
+            // once that hand ends, or if there's no hand in progress, they disappear for good.
+            .filter(
+                p ->
+                    activeUsernames.contains(p.getName())
+                        || (handInProgress
+                            && !deal.getHoleCards(p).isEmpty()
+                            && !deal.hasFolded(p)))
+            .map(p -> toRest(p, game))
+            .collect(Collectors.toList());
+
     return new Game(
         entity.getId(),
         entity.getName(),
         new Blinds(entity.getSmallBlind(), entity.getBigBlind()),
-        game.getPlayers().stream().map(p -> toRest(p, game)).collect(Collectors.toList()),
+        players,
         new ArrayList<>(),
         currentDealId,
-        toRest(game.getCurrentDeal(), currentDealId, game, turnDeadline),
+        toRest(deal, currentDealId, game, turnDeadline),
         you(game, requestingUsername),
         entity.getClosed());
   }
@@ -109,7 +128,8 @@ public class RestMapper {
 
     // A real (card-based) showdown only happens when more than one player is still active;
     // otherwise the pot was won uncontested by everyone else folding, and no hand is shown.
-    boolean realShowdown = game.getPlayers().stream().filter(p -> !deal.hasFolded(p)).count() > 1;
+    boolean realShowdown =
+        deal.filterDealtIn(game.getPlayers()).stream().filter(p -> !deal.hasFolded(p)).count() > 1;
 
     List<WinnerInfo> winners =
         awards.stream()

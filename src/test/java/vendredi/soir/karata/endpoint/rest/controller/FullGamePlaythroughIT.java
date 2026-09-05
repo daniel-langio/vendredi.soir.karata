@@ -121,6 +121,74 @@ class FullGamePlaythroughIT extends FacadeIT {
         "no more actions should be accepted once the deal has reached showdown");
   }
 
+  @Test
+  void leaving_a_hand_in_progress_folds_you_out_and_excludes_you_from_future_deals()
+      throws Exception {
+    UUID gameId = createGame("Leave Test", 10, 20);
+    join(gameId, "dave", 1000);
+    join(gameId, "erin", 1000);
+    join(gameId, "finn", 1000);
+
+    Game started = startDeal(gameId);
+    UUID dealId = started.currentDealId();
+    assertEquals(3, started.players().size());
+
+    // finn (UTG, first to act preflop) leaves before acting - should be auto-folded, not just
+    // removed, so the hand can conclude correctly without him.
+    leave(gameId, "finn");
+
+    Game afterLeave = getGame(gameId);
+    assertEquals(2, afterLeave.players().size(), "finn should no longer be listed");
+    assertTrue(afterLeave.players().stream().noneMatch(p -> p.username().equals("finn")));
+
+    // Blinds already count as "acted" (a known simplification), so dave's call alone closes the
+    // preflop round now that finn is folded out of it.
+    action(dealId, "dave", "CALL", 10L);
+    Game afterCall = getGame(gameId);
+    assertEquals(
+        Phase.FLOP, afterCall.currentDeal().phase(), "hand should progress despite finn leaving");
+    assertEquals(2, afterCall.players().size());
+
+    // Finish the hand normally between the two remaining players.
+    action(dealId, "erin", "CHECK", null);
+    action(dealId, "dave", "CHECK", null);
+    assertEquals(Phase.TURN, getGame(gameId).currentDeal().phase());
+    action(dealId, "erin", "CHECK", null);
+    action(dealId, "dave", "CHECK", null);
+    assertEquals(Phase.RIVER, getGame(gameId).currentDeal().phase());
+    action(dealId, "erin", "CHECK", null);
+    action(dealId, "dave", "CHECK", null);
+
+    Game finished = getGame(gameId);
+    assertEquals(Phase.SHOWDOWN, finished.currentDeal().phase());
+    assertTrue(
+        finished.players().stream().noneMatch(p -> p.username().equals("finn")),
+        "finn should still be excluded after the hand concludes");
+
+    // finn is excluded from the next deal too, not just this one.
+    Game nextDeal = startDeal(gameId);
+    assertEquals(2, nextDeal.players().size(), "finn should not be dealt into a new hand either");
+
+    // If leaving drops the table below 2 eligible players, starting a new deal is rejected.
+    // (dave leaving here also folds him out of this brand-new deal, leaving erin to win it
+    // uncontested - same auto-fold-on-leave behavior as finn's case above.)
+    leave(gameId, "dave");
+    ResponseEntity<String> rejected =
+        rest.postForEntity(
+            "/poker/games/" + gameId + "/deals", authorized("erin", null), String.class);
+    assertEquals(
+        HttpStatus.BAD_REQUEST,
+        rejected.getStatusCode(),
+        "starting a deal with fewer than 2 eligible players should fail");
+  }
+
+  private void leave(UUID gameId, String username) {
+    HttpEntity<Void> req = authorized(username, null);
+    ResponseEntity<Void> resp =
+        rest.postForEntity("/poker/games/" + gameId + "/leave", req, Void.class);
+    assertEquals(HttpStatus.NO_CONTENT, resp.getStatusCode(), username + " should be able to leave");
+  }
+
   private UUID createGame(String name, long smallBlind, long bigBlind) {
     Map<String, Object> body =
         Map.of("name", name, "blinds", Map.of("small", smallBlind, "big", bigBlind));

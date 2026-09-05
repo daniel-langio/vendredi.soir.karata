@@ -22,6 +22,12 @@ public class DealService {
   // real test player who was just reading the board).
   public static final Duration TURN_TIMEOUT = Duration.ofSeconds(120);
 
+  // After this many consecutive hands a player is auto-folded on timeout without ever taking a
+  // real action in between, treat them as disconnected and remove them from the table - matches
+  // the "manual and disconnected" leave requirement without needing any separate heartbeat/last
+  // seen tracking; missing several turns in a row already is that signal.
+  public static final int MISSED_TURNS_BEFORE_AUTO_LEAVE = 3;
+
   private final GameService gs;
 
   /**
@@ -32,7 +38,7 @@ public class DealService {
   public Instant currentTurnDeadline(UUID gid, UUID did) {
     Game g = gs.getGame(gid);
     Deal d = g.getCurrentDeal();
-    if (d == null || g.getRules().determineNextPlayer(d, g.getPlayers()) == null) {
+    if (d == null || g.getRules().determineNextPlayer(d, d.filterDealtIn(g.getPlayers())) == null) {
       return null;
     }
     return gs.getLastActionTimestamp(did).map(t -> t.plus(TURN_TIMEOUT)).orElse(null);
@@ -52,13 +58,18 @@ public class DealService {
     UUID did = g.getCurrentDealId();
 
     while (true) {
-      Player active = g.getRules().determineNextPlayer(d, g.getPlayers());
+      Player active = g.getRules().determineNextPlayer(d, d.filterDealtIn(g.getPlayers()));
       if (active == null) break;
       Instant deadline = gs.getLastActionTimestamp(did).map(t -> t.plus(TURN_TIMEOUT)).orElse(null);
       if (deadline == null || Instant.now().isBefore(deadline)) break;
 
       saveAll(gid, did, g.getDealer().execute(g, d, new Fold(active)));
       progressDealIfNeeded(g, d, gid, did);
+
+      int missed = gs.incrementMissedTurns(gid, active.getName());
+      if (missed >= MISSED_TURNS_BEFORE_AUTO_LEAVE) {
+        gs.markPlayerLeft(gid, active.getName());
+      }
     }
   }
 
@@ -66,7 +77,7 @@ public class DealService {
   public void takeAction(UUID did, ActionRequest req) {
     Game g = gs.getGameByDealId(did);
     Deal d = g.getCurrentDeal();
-    Player p = g.getRules().determineNextPlayer(d, g.getPlayers());
+    Player p = g.getRules().determineNextPlayer(d, d.filterDealtIn(g.getPlayers()));
     takeAction(did, req, p != null ? p.getName() : null);
   }
 
@@ -95,9 +106,12 @@ public class DealService {
             .filter(p -> p.getName().equals(username))
             .findFirst()
             .orElseThrow(() -> new ForbiddenException("Player is not registered in this game"));
+    if (!gs.getActiveUsernames(gid).contains(username)) {
+      throw new ForbiddenException("You have left this table");
+    }
 
     // Verify it is this player's turn
-    Player nextPlayer = g.getRules().determineNextPlayer(d, g.getPlayers());
+    Player nextPlayer = g.getRules().determineNextPlayer(d, d.filterDealtIn(g.getPlayers()));
     if (nextPlayer == null) {
       throw new BadRequestException("No active turn or deal is over");
     }
@@ -123,6 +137,7 @@ public class DealService {
       throw new BadRequestException("Illegal move: " + e.getMessage());
     }
 
+    gs.resetMissedTurns(gid, username);
     progressDealIfNeeded(g, d, gid, did);
   }
 
@@ -134,7 +149,11 @@ public class DealService {
     }
     Game g = gs.getGame(gid);
 
-    List<Player> eligible = g.getPlayers().stream().filter(p -> g.getChips(p) > 0).toList();
+    Set<String> activeUsernames = gs.getActiveUsernames(gid);
+    List<Player> eligible =
+        g.getPlayers().stream()
+            .filter(p -> g.getChips(p) > 0 && activeUsernames.contains(p.getName()))
+            .toList();
     if (eligible.size() < 2) {
       throw new BadRequestException("At least 2 players with chips are required to start a deal");
     }
@@ -166,6 +185,43 @@ public class DealService {
   }
 
   /**
+   * A player standing up from the table for good: excluded from every future deal, and folded out
+   * of whatever hand is currently in progress (unless they're already folded, all-in, or the hand
+   * has already reached showdown - an all-in player has no more decisions left to make by leaving,
+   * so they stay in for showdown same as if they'd stayed seated).
+   */
+  @Transactional
+  public void leaveGame(UUID gid, String username) {
+    gs.lockGame(gid);
+    Game g = gs.getGame(gid);
+    Player player =
+        g.getPlayers().stream()
+            .filter(p -> p.getName().equals(username))
+            .findFirst()
+            .orElseThrow(() -> new ForbiddenException("Player is not registered in this game"));
+    if (!gs.getActiveUsernames(gid).contains(username)) {
+      throw new ConflictException("Player has already left this table");
+    }
+
+    Deal d = g.getCurrentDeal();
+    // Only fold them out if they were actually dealt into this hand - a player who busted out
+    // before this deal started (0 chips, so excluded from it) or already left earlier was never
+    // part of it, and folding them in now would incorrectly attribute a Fold action to a hand
+    // they never played.
+    if (d != null
+        && !d.getHoleCards(player).isEmpty()
+        && !"SHOWDOWN".equals(d.getCurrentPhase())
+        && !d.hasFolded(player)
+        && !d.isAllIn(player, g)) {
+      UUID did = g.getCurrentDealId();
+      saveAll(gid, did, g.getDealer().execute(g, d, new Fold(player)));
+      progressDealIfNeeded(g, d, gid, did);
+    }
+
+    gs.markPlayerLeft(gid, username);
+  }
+
+  /**
    * Advances the deal to the next street (or triggers the showdown) once the current betting round
    * is complete, or immediately awards the pot if every other player has folded.
    */
@@ -174,9 +230,10 @@ public class DealService {
       return;
     }
 
-    List<Player> active = g.getPlayers().stream().filter(p -> !d.hasFolded(p)).toList();
+    List<Player> dealtIn = d.filterDealtIn(g.getPlayers());
+    List<Player> active = dealtIn.stream().filter(p -> !d.hasFolded(p)).toList();
     boolean foldedOut = active.size() <= 1;
-    if (!foldedOut && !g.getRules().isBettingRoundComplete(d, g.getPlayers())) {
+    if (!foldedOut && !g.getRules().isBettingRoundComplete(d, dealtIn)) {
       return;
     }
 

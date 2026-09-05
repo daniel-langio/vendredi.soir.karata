@@ -15,4 +15,7 @@ public class PlayerEntity {
   private UUID gameId;
   private String username;
   private Long initialChips;
+
+  @Builder.Default private Boolean active = true;
+  @Builder.Default private Integer missedTurns = 0;
 }

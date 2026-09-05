@@ -2,6 +2,7 @@ package vendredi.soir.karata.service;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -100,6 +101,61 @@ public class GameService {
     }
     ge.setClosed(true);
     gameRepository.save(ge);
+  }
+
+  @Transactional(readOnly = true)
+  public Set<String> getActiveUsernames(UUID gid) {
+    return playerRepository.findByGameId(gid).stream()
+        .filter(p -> !Boolean.FALSE.equals(p.getActive()))
+        .map(PlayerEntity::getUsername)
+        .collect(Collectors.toSet());
+  }
+
+  /**
+   * Marks a player as having left the table for good: excluded from future deals and from the
+   * players list shown to clients. Does not touch any deal currently in progress - the caller is
+   * responsible for folding them out of it first if needed (see DealService.leaveGame).
+   */
+  @Transactional
+  public void markPlayerLeft(UUID gid, String username) {
+    PlayerEntity pe =
+        playerRepository
+            .findByGameIdAndUsername(gid, username)
+            .orElseThrow(() -> new ForbiddenException("Player is not registered in this game"));
+    if (Boolean.FALSE.equals(pe.getActive())) {
+      throw new ConflictException("Player has already left this table");
+    }
+    pe.setActive(false);
+    playerRepository.save(pe);
+  }
+
+  /** Resets a player's consecutive-missed-turns count - called whenever they actually act. */
+  @Transactional
+  public void resetMissedTurns(UUID gid, String username) {
+    playerRepository
+        .findByGameIdAndUsername(gid, username)
+        .ifPresent(
+            pe -> {
+              if (pe.getMissedTurns() != null && pe.getMissedTurns() != 0) {
+                pe.setMissedTurns(0);
+                playerRepository.save(pe);
+              }
+            });
+  }
+
+  /**
+   * Records that a player's turn had to be auto-folded on timeout, and returns their new
+   * consecutive-missed-turns count (0 if the player entity is somehow missing).
+   */
+  @Transactional
+  public int incrementMissedTurns(UUID gid, String username) {
+    Optional<PlayerEntity> found = playerRepository.findByGameIdAndUsername(gid, username);
+    if (found.isEmpty()) return 0;
+    PlayerEntity pe = found.get();
+    int missed = (pe.getMissedTurns() == null ? 0 : pe.getMissedTurns()) + 1;
+    pe.setMissedTurns(missed);
+    playerRepository.save(pe);
+    return missed;
   }
 
   @Transactional(readOnly = true)

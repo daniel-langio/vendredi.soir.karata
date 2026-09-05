@@ -30,6 +30,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PlayerInfo'
+          description: |
+            Excludes anyone who has left the table (see POST /games/{gameId}/leave), except a
+            player who left while all-in in a hand still in progress - they stay visible until
+            that hand reaches showdown.
         dealHistory:
           type: array
           items:
@@ -480,6 +484,39 @@ paths:
       responses:
         '204':
           description: Table closed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Caller is not seated at this table
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /games/{gameId}/leave:
+    post:
+      summary: Stand up from the table for good
+      description: |
+        The caller is excluded from every future deal at this table (they no longer count toward
+        the players list or the minimum-2-players check) and, if a hand is currently in progress,
+        folded out of it unless they're already folded, all-in (an all-in player has no more
+        decisions to make by leaving, so they stay in for that hand's showdown), or the hand has
+        already reached showdown. Not reversible - there is no way to sit back down.
+
+        A player who has been auto-folded on turn timeout for several hands in a row without ever
+        acting is treated the same way automatically (see DealState.turnDeadline) - this endpoint
+        covers the manual case.
+      tags: [Game Infrastructure]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Left the table
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':

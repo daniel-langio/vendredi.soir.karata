@@ -149,6 +149,22 @@ class ApiClient {
     }
   }
 
+  /// POST /games/{gameId}/leave
+  /// Stands the caller up from the table for good - excluded from future deals, and folded out of
+  /// whichever hand is in progress if they were dealt into it.
+  Future<void> leaveTable(String gameId) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/games/$gameId/leave'),
+      headers: _headers,
+    );
+
+    if (response.statusCode == 204) {
+      return;
+    } else {
+      _throwDetailedError(response);
+    }
+  }
+
   /// GET /deals/{dealId}/hand/me
   /// Fetch the calling player's private cards
   Future<Map<String, dynamic>> getMyHand(String dealId) async {

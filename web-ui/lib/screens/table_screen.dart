@@ -192,6 +192,48 @@ class _TableScreenState extends State<TableScreen> {
     }
   }
 
+  Future<void> _leaveTable() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Leave this table?'),
+        content: const Text(
+          "You'll be folded out of the current hand if you're still in it, and won't be dealt "
+          "into any future ones here. You can't sit back down afterwards.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Leave table', style: TextStyle(color: KarataColors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await _apiClient.leaveTable(widget.gameId);
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed(
+        '/menu',
+        arguments: {
+          'serverUrl': widget.serverUrl,
+          'token': widget.token,
+          'username': widget.username,
+        },
+      );
+    } catch (e) {
+      _showError('Could not leave table: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   void _toggleSizer(String type) {
     if (_selectedActionType == type) {
       setState(() => _selectedActionType = null);
@@ -232,6 +274,10 @@ class _TableScreenState extends State<TableScreen> {
             PopupMenuButton<void>(
               icon: const Icon(Icons.more_vert, size: 20),
               itemBuilder: (context) => [
+                PopupMenuItem(
+                  onTap: _leaveTable,
+                  child: const Text('Leave table'),
+                ),
                 PopupMenuItem(
                   onTap: _closeTable,
                   child: const Text('Close table', style: TextStyle(color: KarataColors.red)),

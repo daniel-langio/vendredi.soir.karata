@@ -1,6 +1,7 @@
 package vendredi.soir.karata.endpoint.rest.controller;
 
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -27,7 +28,7 @@ public class PokerController {
   public Game create(@RequestBody CreateGameRequest r) {
     validateCreateGame(r);
     GameEntity ge = gs.createGame(r.name(), r.blinds().small(), r.blinds().big());
-    return rm.toRest(gs.getGame(ge.getId()), ge, null, null);
+    return rm.toRest(gs.getGame(ge.getId()), ge, null, null, Set.of());
   }
 
   @GetMapping("/games/{gid}")
@@ -40,7 +41,8 @@ public class PokerController {
     UUID currentDealId = g.getCurrentDealId();
     Instant turnDeadline =
         currentDealId != null ? ds.currentTurnDeadline(gid, currentDealId) : null;
-    return rm.toRest(g, gr.findById(gid).orElseThrow(), username, turnDeadline);
+    return rm.toRest(
+        g, gr.findById(gid).orElseThrow(), username, turnDeadline, gs.getActiveUsernames(gid));
   }
 
   @PostMapping("/games/{gid}/players")
@@ -61,6 +63,15 @@ public class PokerController {
       @RequestHeader(value = "Authorization", required = false) String authHeader) {
     String username = jwtService.validateAndExtractUsername(authHeader);
     gs.closeGame(gid, username);
+  }
+
+  @PostMapping("/games/{gid}/leave")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void leave(
+      @PathVariable UUID gid,
+      @RequestHeader(value = "Authorization", required = false) String authHeader) {
+    String username = jwtService.validateAndExtractUsername(authHeader);
+    ds.leaveGame(gid, username);
   }
 
   @PostMapping("/games/{gid}/deals")
