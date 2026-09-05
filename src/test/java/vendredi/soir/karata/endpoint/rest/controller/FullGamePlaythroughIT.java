@@ -186,7 +186,8 @@ class FullGamePlaythroughIT extends FacadeIT {
     HttpEntity<Void> req = authorized(username, null);
     ResponseEntity<Void> resp =
         rest.postForEntity("/poker/games/" + gameId + "/leave", req, Void.class);
-    assertEquals(HttpStatus.NO_CONTENT, resp.getStatusCode(), username + " should be able to leave");
+    assertEquals(
+        HttpStatus.NO_CONTENT, resp.getStatusCode(), username + " should be able to leave");
   }
 
   private UUID createGame(String name, long smallBlind, long bigBlind) {

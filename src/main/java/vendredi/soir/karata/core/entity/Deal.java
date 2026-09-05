@@ -179,8 +179,8 @@ public class Deal {
   /**
    * Narrows a game's full player roster down to those actually dealt hole cards in this deal.
    * Needed because the roster can include players who joined after this deal started, or who left
-   * the table before a later deal was dealt - without this, turn-order/betting-round/showdown
-   * logic would wrongly keep counting them as still "active" in a deal they were never part of.
+   * the table before a later deal was dealt - without this, turn-order/betting-round/showdown logic
+   * would wrongly keep counting them as still "active" in a deal they were never part of.
    */
   public List<Player> filterDealtIn(List<Player> players) {
     return players.stream().filter(p -> !getHoleCards(p).isEmpty()).toList();
