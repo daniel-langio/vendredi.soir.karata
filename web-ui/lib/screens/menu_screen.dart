@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api_client.dart';
+import '../l10n/app_localizations.dart';
+import '../locale_controller.dart';
 import '../theme.dart';
 
 class RecentTable {
@@ -99,10 +101,21 @@ class _MenuScreenState extends State<MenuScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
         actions: [
-          IconButton(icon: const Icon(Icons.logout), onPressed: _logOut, tooltip: 'Log out'),
+          PopupMenuButton<Locale?>(
+            icon: const Icon(Icons.language),
+            tooltip: t.language,
+            onSelected: (locale) => LocaleController.instance.setLocale(locale),
+            itemBuilder: (context) => [
+              PopupMenuItem(value: null, child: Text(t.systemDefault)),
+              const PopupMenuItem(value: Locale('en'), child: Text('English')),
+              const PopupMenuItem(value: Locale('fr'), child: Text('Français')),
+            ],
+          ),
+          IconButton(icon: const Icon(Icons.logout), onPressed: _logOut, tooltip: t.logOut),
         ],
       ),
       body: SafeArea(
@@ -127,8 +140,8 @@ class _MenuScreenState extends State<MenuScreen> {
                         style: const TextStyle(
                             fontSize: 20, fontWeight: FontWeight.w500, color: KarataColors.ink),
                       ),
-                      const Text('This name is your sign-in',
-                          style: TextStyle(fontSize: 12.5, color: KarataColors.dim)),
+                      Text(t.signInHint,
+                          style: const TextStyle(fontSize: 12.5, color: KarataColors.dim)),
                     ],
                   ),
                 ],
@@ -137,33 +150,33 @@ class _MenuScreenState extends State<MenuScreen> {
               ElevatedButton.icon(
                 onPressed: _createTable,
                 icon: const Text('♠', style: TextStyle(color: KarataColors.dim)),
-                label: const Text('Create a table'),
+                label: Text(t.createTable),
               ),
               const SizedBox(height: 11),
               OutlinedButton.icon(
                 onPressed: _joinTable,
                 icon: const Icon(Icons.subdirectory_arrow_right, size: 18),
-                label: const Text('Join with a link'),
+                label: Text(t.joinWithLink),
               ),
               const SizedBox(height: 32),
               Row(
                 children: [
-                  const Text('Your tables',
-                      style: TextStyle(
+                  Text(t.yourTables,
+                      style: const TextStyle(
                           fontSize: 14, fontWeight: FontWeight.w600, color: KarataColors.ink)),
                   const SizedBox(width: 8),
-                  const Text('kept on this phone',
-                      style: TextStyle(fontSize: 12.5, color: KarataColors.dim)),
+                  Text(t.keptOnThisDevice,
+                      style: const TextStyle(fontSize: 12.5, color: KarataColors.dim)),
                 ],
               ),
               const SizedBox(height: 4),
               Expanded(
                 child: _recent.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text(
-                          'No tables yet. Create or join one to see it here.',
+                          t.noTablesYet,
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: KarataColors.dim),
+                          style: const TextStyle(color: KarataColors.dim),
                         ),
                       )
                     : ListView.separated(
@@ -171,17 +184,17 @@ class _MenuScreenState extends State<MenuScreen> {
                         separatorBuilder: (context, index) =>
                             const Divider(height: 1, color: Color(0xFF1A181E)),
                         itemBuilder: (context, index) {
-                          final t = _recent[index];
+                          final rt = _recent[index];
                           return ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.circle, size: 7, color: KarataColors.live),
-                            title: Text(t.name,
+                            title: Text(rt.name,
                                 style: const TextStyle(color: KarataColors.ink, fontSize: 16.5)),
                             trailing: TextButton(
-                              onPressed: () => _openTable(t.gameId),
-                              child: const Text('Open'),
+                              onPressed: () => _openTable(rt.gameId),
+                              child: Text(t.open),
                             ),
-                            onTap: () => _openTable(t.gameId),
+                            onTap: () => _openTable(rt.gameId),
                           );
                         },
                       ),

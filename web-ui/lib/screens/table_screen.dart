@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../api/api_client.dart';
+import '../l10n/app_localizations.dart';
 import '../theme.dart';
 
 class TableScreen extends StatefulWidget {
@@ -119,7 +120,7 @@ class _TableScreenState extends State<TableScreen> {
       if (mounted) setState(() => _game = game);
       await _refresh();
     } catch (e) {
-      _showError('Could not start hand: $e');
+      _showError((t) => t.couldNotStartHand('$e'));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -133,16 +134,17 @@ class _TableScreenState extends State<TableScreen> {
       setState(() => _selectedActionType = null);
       await _refresh();
     } catch (e) {
-      _showError('$actionType failed: $e');
+      _showError((t) => t.actionFailed(actionType, '$e'));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _showError(String message) {
+  void _showError(String Function(AppLocalizations) message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: KarataColors.red),
+      SnackBar(
+          content: Text(message(AppLocalizations.of(context))), backgroundColor: KarataColors.red),
     );
   }
 
@@ -154,30 +156,30 @@ class _TableScreenState extends State<TableScreen> {
     await Clipboard.setData(ClipboardData(text: invite));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Invite copied — send it to whoever you want to invite')),
+      SnackBar(content: Text(AppLocalizations.of(context).inviteCopied)),
     );
   }
 
   Future<void> _closeTable() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Close this table?'),
-        content: const Text(
-          'Nobody will be able to join, start a hand, or act at this table again. '
-          'This cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Close table', style: TextStyle(color: KarataColors.red)),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final t = AppLocalizations.of(context);
+        return AlertDialog(
+          title: Text(t.closeTableTitle),
+          content: Text(t.closeTableContent),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(t.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(t.closeTable, style: const TextStyle(color: KarataColors.red)),
+            ),
+          ],
+        );
+      },
     );
     if (confirmed != true) return;
 
@@ -186,7 +188,7 @@ class _TableScreenState extends State<TableScreen> {
       await _apiClient.closeTable(widget.gameId);
       await _refresh();
     } catch (e) {
-      _showError('Could not close table: $e');
+      _showError((t) => t.couldNotCloseTable('$e'));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -195,23 +197,23 @@ class _TableScreenState extends State<TableScreen> {
   Future<void> _leaveTable() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Leave this table?'),
-        content: const Text(
-          "You'll be folded out of the current hand if you're still in it, and won't be dealt "
-          "into any future ones here. You can't sit back down afterwards.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Leave table', style: TextStyle(color: KarataColors.red)),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final t = AppLocalizations.of(context);
+        return AlertDialog(
+          title: Text(t.leaveTableTitle),
+          content: Text(t.leaveTableContent),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(t.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(t.leaveTable, style: const TextStyle(color: KarataColors.red)),
+            ),
+          ],
+        );
+      },
     );
     if (confirmed != true) return;
 
@@ -232,7 +234,7 @@ class _TableScreenState extends State<TableScreen> {
         },
       );
     } catch (e) {
-      _showError('Could not leave table: $e');
+      _showError((t) => t.couldNotLeaveTable('$e'));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -257,6 +259,7 @@ class _TableScreenState extends State<TableScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    final t = AppLocalizations.of(context);
     final gameName = _game?['name'] as String? ?? '';
     final pot = _currentDeal?['pot']?.toString() ?? '0';
     final communityCards =
@@ -266,12 +269,12 @@ class _TableScreenState extends State<TableScreen> {
     return Scaffold(
       backgroundColor: KarataColors.bg,
       appBar: AppBar(
-        title: Text(_isClosed ? '$gameName (closed)' : gameName,
+        title: Text(_isClosed ? '$gameName (${t.closedSuffix})' : gameName,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: KarataColors.dim)),
         actions: [
           IconButton(
             icon: const Icon(Icons.ios_share, size: 20),
-            tooltip: 'Copy invite',
+            tooltip: t.copyInvite,
             onPressed: _copyInvite,
           ),
           if (!_isClosed)
@@ -280,11 +283,11 @@ class _TableScreenState extends State<TableScreen> {
               itemBuilder: (context) => [
                 PopupMenuItem(
                   onTap: _leaveTable,
-                  child: const Text('Leave table'),
+                  child: Text(t.leaveTable),
                 ),
                 PopupMenuItem(
                   onTap: _closeTable,
-                  child: const Text('Close table', style: TextStyle(color: KarataColors.red)),
+                  child: Text(t.closeTable, style: const TextStyle(color: KarataColors.red)),
                 ),
               ],
             ),
@@ -331,8 +334,8 @@ class _TableScreenState extends State<TableScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            const Text('Pot',
-                                style: TextStyle(fontSize: 11.5, color: KarataColors.dim)),
+                            Text(t.pot,
+                                style: const TextStyle(fontSize: 11.5, color: KarataColors.dim)),
                             Text(pot,
                                 style: const TextStyle(
                                     fontSize: 22, color: KarataColors.ink, fontWeight: FontWeight.w400)),
@@ -369,15 +372,17 @@ class _TableScreenState extends State<TableScreen> {
   }
 
   String _liveStatusLabel() {
-    if (!_isStale) return 'Live';
+    final t = AppLocalizations.of(context);
+    if (!_isStale) return t.live;
     final last = _lastUpdated;
-    if (last == null) return 'Reconnecting';
+    if (last == null) return t.reconnecting;
     final secs = DateTime.now().difference(last).inSeconds;
-    return 'Last update ${secs}s ago';
+    return t.lastUpdateAgo(secs);
   }
 
   Widget _buildTurnLine() {
     if (_isClosed || _dealId.isEmpty || _phase == 'SHOWDOWN') return const SizedBox();
+    final t = AppLocalizations.of(context);
 
     if (_isMyTurn && _turnDeadline != null) {
       final deadline = _turnDeadline!;
@@ -396,8 +401,7 @@ class _TableScreenState extends State<TableScreen> {
         children: [
           _ClockBar(fraction: fraction),
           const SizedBox(width: 8),
-          Text('Your turn — ${secs}s left',
-              style: const TextStyle(fontSize: 13, color: KarataColors.dim)),
+          Text(t.yourTurnLeft(secs), style: const TextStyle(fontSize: 13, color: KarataColors.dim)),
         ],
       );
     }
@@ -407,18 +411,19 @@ class _TableScreenState extends State<TableScreen> {
       orElse: () => null,
     );
     if (active == null) return const SizedBox();
-    return Text('Waiting on ${active['username']}',
+    return Text(t.waitingOn(active['username']?.toString() ?? ''),
         style: const TextStyle(fontSize: 13, color: KarataColors.dim));
   }
 
   Widget _buildActionArea() {
+    final t = AppLocalizations.of(context);
     if (_isClosed) {
-      return const SizedBox(
+      return SizedBox(
         width: double.infinity,
         height: 48,
         child: Center(
-          child: Text('THIS TABLE IS CLOSED',
-              style: TextStyle(
+          child: Text(t.tableClosed,
+              style: const TextStyle(
                   color: KarataColors.dim,
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
@@ -430,14 +435,14 @@ class _TableScreenState extends State<TableScreen> {
     if (_dealId.isEmpty) {
       return SizedBox(
         width: double.infinity,
-        child: ElevatedButton(onPressed: _startHand, child: const Text('Start the hand')),
+        child: ElevatedButton(onPressed: _startHand, child: Text(t.startTheHand)),
       );
     }
 
     if (_phase == 'SHOWDOWN') {
       return SizedBox(
         width: double.infinity,
-        child: ElevatedButton(onPressed: _startHand, child: const Text('Next hand')),
+        child: ElevatedButton(onPressed: _startHand, child: Text(t.nextHand)),
       );
     }
 
@@ -449,14 +454,14 @@ class _TableScreenState extends State<TableScreen> {
     final raiseType = currentRoundBet == 0 ? 'BET' : 'RAISE';
     final sizerOpen = _selectedActionType == raiseType;
     final raiseAmount = sizerOpen ? _sizerAmount : minRaise;
-    final callLabel = callAmount == 0 ? 'Check' : 'Call $callAmount';
-    final raiseLabel = '${currentRoundBet == 0 ? 'Bet' : 'Raise'} $raiseAmount';
+    final callLabel = callAmount == 0 ? t.check : t.call(callAmount);
+    final raiseLabel = currentRoundBet == 0 ? t.bet(raiseAmount) : t.raise(raiseAmount);
 
     return Row(
       children: [
         Expanded(
           child: _ActBtn(
-            label: 'Fold',
+            label: t.fold,
             enabled: mine,
             onPressed: () => _submitAction('FOLD'),
           ),
@@ -502,6 +507,7 @@ class _TableScreenState extends State<TableScreen> {
     final pot = (_currentDeal?['pot'] as num?)?.toInt() ?? 0;
 
     int clampAmount(int v) => v.clamp(minRaise, maxRaise);
+    final t = AppLocalizations.of(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -519,7 +525,7 @@ class _TableScreenState extends State<TableScreen> {
               Text('$_sizerAmount',
                   style: const TextStyle(
                       fontSize: 32, fontWeight: FontWeight.w300, color: KarataColors.ink)),
-              Text('min $minRaise · all in $maxRaise',
+              Text(t.minAllIn(minRaise, maxRaise),
                   style: const TextStyle(fontSize: 11.5, color: KarataColors.dim)),
             ],
           ),
@@ -542,11 +548,12 @@ class _TableScreenState extends State<TableScreen> {
           ),
           Row(
             children: [
-              _quickBtn('Min', _sizerAmount == minRaise, () => setState(() => _sizerAmount = minRaise)),
-              _quickBtn('½ pot', false, () => setState(() => _sizerAmount = clampAmount(pot ~/ 2))),
-              _quickBtn('Pot', false, () => setState(() => _sizerAmount = clampAmount(pot))),
+              _quickBtn(t.min, _sizerAmount == minRaise, () => setState(() => _sizerAmount = minRaise)),
               _quickBtn(
-                  'All in', _sizerAmount == maxRaise, () => setState(() => _sizerAmount = maxRaise)),
+                  t.halfPot, false, () => setState(() => _sizerAmount = clampAmount(pot ~/ 2))),
+              _quickBtn(t.pot, false, () => setState(() => _sizerAmount = clampAmount(pot))),
+              _quickBtn(t.allIn, _sizerAmount == maxRaise,
+                  () => setState(() => _sizerAmount = maxRaise)),
             ],
           ),
         ],
@@ -605,6 +612,33 @@ class _TableScreenState extends State<TableScreen> {
   }
 }
 
+/// The API returns lastAction as a pre-formatted English string (e.g. "CALL 20", "SMALL BLIND
+/// 10") derived from the domain action itself, not a translation key - re-parse it here rather
+/// than changing the API contract just for client-side display purposes.
+String _formatLastAction(AppLocalizations t, String raw) {
+  final parts = raw.split(' ');
+  if (parts.isEmpty) return raw;
+  final amount = int.tryParse(parts.last) ?? 0;
+  switch (parts.first) {
+    case 'FOLD':
+      return t.fold;
+    case 'CHECK':
+      return t.check;
+    case 'CALL':
+      return t.call(amount);
+    case 'BET':
+      return t.bet(amount);
+    case 'RAISE':
+      return t.raise(amount);
+    case 'SMALL':
+      return '${t.sb} $amount';
+    case 'BIG':
+      return '${t.bb} $amount';
+    default:
+      return raw;
+  }
+}
+
 class _SeatWidget extends StatelessWidget {
   final Map<String, dynamic> player;
   final String? activePlayerId;
@@ -613,12 +647,14 @@ class _SeatWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final playerId = player['playerId']?.toString();
     final username = player['username']?.toString() ?? 'Player';
     final chips = player['chips']?.toString() ?? '0';
     final status = player['status']?.toString() ?? 'ACTIVE';
     final blind = player['blind']?.toString();
-    final lastAction = player['lastAction']?.toString();
+    final lastActionRaw = player['lastAction']?.toString();
+    final lastAction = lastActionRaw != null ? _formatLastAction(t, lastActionRaw) : null;
     final contribution = (player['contributionThisRound'] as num?)?.toInt() ?? 0;
     final isActive = activePlayerId != null && activePlayerId == playerId;
     final isFolded = status == 'FOLDED';
@@ -636,7 +672,8 @@ class _SeatWidget extends StatelessWidget {
               // changes to a genuinely new value (including its first appearance), giving a brief
               // "just happened" pop without any manual AnimationController bookkeeping.
               TweenAnimationBuilder<double>(
-                key: ValueKey(lastAction),
+                key: ValueKey(lastActionRaw), // raw, not the localized text - a language switch
+                // shouldn't replay this pop, only a genuinely new action should.
                 tween: Tween(begin: 1.4, end: 1.0),
                 duration: const Duration(milliseconds: 380),
                 curve: Curves.easeOutBack,
@@ -691,7 +728,7 @@ class _SeatWidget extends StatelessWidget {
                         ),
                         alignment: Alignment.center,
                         child: Text(
-                          isAllIn ? 'ALL' : (blind == 'SMALL' ? 'SB' : 'BB'),
+                          isAllIn ? t.allInTag : (blind == 'SMALL' ? t.sb : t.bb),
                           style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w600,
@@ -857,9 +894,9 @@ class _MadeHandBox extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: const Text('Hand strength\navailable soon',
+      child: Text(AppLocalizations.of(context).handStrengthAvailableSoon,
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 12.5, color: KarataColors.dim)),
+          style: const TextStyle(fontSize: 12.5, color: KarataColors.dim)),
     );
   }
 }
@@ -897,7 +934,7 @@ class _OutcomeBanner extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: 9,
       children: [
-        Text('💰 $names won $total',
+        Text(AppLocalizations.of(context).won(names, total),
             style: const TextStyle(
                 color: KarataColors.ink, fontSize: 14.5, fontWeight: FontWeight.w500)),
         if (rank != null)

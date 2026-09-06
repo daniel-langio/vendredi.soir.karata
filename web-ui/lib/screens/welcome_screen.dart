@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../theme.dart';
 
 const kDefaultServerUrl =
@@ -45,6 +46,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -61,27 +63,27 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 style: TextStyle(fontSize: 34, fontWeight: FontWeight.w300, color: KarataColors.ink),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Play poker with your friends. No accounts to manage,\njust a name and a table.',
+              Text(
+                t.welcomeTagline,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13.5, color: KarataColors.dim, height: 1.45),
+                style: const TextStyle(fontSize: 13.5, color: KarataColors.dim, height: 1.45),
               ),
               const Spacer(),
               if (_showServerField) ...[
                 TextField(
                   controller: _urlController,
                   style: const TextStyle(color: KarataColors.ink, fontSize: 13),
-                  decoration: const InputDecoration(labelText: 'Server base URL'),
+                  decoration: InputDecoration(labelText: t.serverBaseUrl),
                 ),
                 const SizedBox(height: 16),
               ],
-              ElevatedButton(onPressed: _goToRegister, child: const Text('Create account')),
+              ElevatedButton(onPressed: _goToRegister, child: Text(t.createAccount)),
               const SizedBox(height: 11),
-              OutlinedButton(onPressed: _goToLogin, child: const Text('Log in')),
+              OutlinedButton(onPressed: _goToLogin, child: Text(t.logIn)),
               const SizedBox(height: 8),
               TextButton(
                 onPressed: () => setState(() => _showServerField = !_showServerField),
-                child: Text(_showServerField ? 'Hide server settings' : 'Server settings'),
+                child: Text(_showServerField ? t.hideServerSettings : t.serverSettings),
               ),
             ],
           ),

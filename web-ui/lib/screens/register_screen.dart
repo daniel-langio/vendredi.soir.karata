@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api_client.dart';
+import '../l10n/app_localizations.dart';
 import '../theme.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -52,7 +53,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not create account: $e'), backgroundColor: KarataColors.red),
+          SnackBar(
+              content: Text(AppLocalizations.of(context).couldNotCreateAccount('$e')),
+              backgroundColor: KarataColors.red),
         );
       }
     } finally {
@@ -62,6 +65,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(),
       body: SafeArea(
@@ -72,30 +76,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'Create account',
-                  style: TextStyle(fontSize: 34, fontWeight: FontWeight.w300, color: KarataColors.ink),
+                Text(
+                  t.createAccount,
+                  style: const TextStyle(
+                      fontSize: 34, fontWeight: FontWeight.w300, color: KarataColors.ink),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'This name is how everyone else at the table will see you.',
-                  style: TextStyle(fontSize: 13.5, color: KarataColors.dim, height: 1.45),
+                Text(
+                  t.registerSubtitle,
+                  style: const TextStyle(fontSize: 13.5, color: KarataColors.dim, height: 1.45),
                 ),
                 const SizedBox(height: 26),
                 TextFormField(
                   controller: _usernameController,
-                  decoration: const InputDecoration(labelText: 'Username'),
-                  validator: (v) => (v == null || v.trim().length < 3)
-                      ? 'At least 3 characters'
-                      : null,
+                  decoration: InputDecoration(labelText: t.username),
+                  validator: (v) =>
+                      (v == null || v.trim().length < 3) ? t.usernameTooShort : null,
                 ),
                 const SizedBox(height: 11),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Password'),
-                  validator: (v) =>
-                      (v == null || v.length < 6) ? 'At least 6 characters' : null,
+                  decoration: InputDecoration(labelText: t.password),
+                  validator: (v) => (v == null || v.length < 6) ? t.passwordTooShort : null,
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
@@ -106,7 +109,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2, color: KarataColors.ink),
                         )
-                      : const Text('Create account'),
+                      : Text(t.createAccount),
                 ),
               ],
             ),

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'l10n/app_localizations.dart';
+import 'locale_controller.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/login_screen.dart';
@@ -14,6 +17,7 @@ void main() {
   // Drop the "#" from URLs (e.g. karata.example.com/table/<id> instead of
   // karata.example.com/#/table/<id>) so paths look like normal web app paths.
   usePathUrlStrategy();
+  LocaleController.instance.load();
   runApp(const MyApp());
 }
 
@@ -22,23 +26,35 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Karata',
-      debugShowCheckedModeBanner: false,
-      theme: karataTheme(),
-      onGenerateRoute: _onGenerateRoute,
-      // This UI was designed as a phone screen, not a desktop page - on a wide browser window it
-      // just looked like that same phone layout stretched edge to edge. Cap it at a phone-ish
-      // width and center it instead, same as most mobile-first web apps do.
-      builder: (context, child) => ColoredBox(
-        color: KarataColors.bg,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 430),
-            child: child,
+    return ValueListenableBuilder<Locale?>(
+      valueListenable: LocaleController.instance,
+      builder: (context, locale, _) {
+        return MaterialApp(
+          title: 'Karata',
+          debugShowCheckedModeBanner: false,
+          theme: karataTheme(),
+          locale: locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+          ],
+          onGenerateRoute: _onGenerateRoute,
+          // This UI was designed as a phone screen, not a desktop page - on a wide browser window
+          // it just looked like that same phone layout stretched edge to edge. Cap it at a
+          // phone-ish width and center it instead, same as most mobile-first web apps do.
+          builder: (context, child) => ColoredBox(
+            color: KarataColors.bg,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 430),
+                child: child,
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

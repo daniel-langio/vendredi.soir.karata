@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../api/api_client.dart';
+import '../l10n/app_localizations.dart';
 import '../theme.dart';
 import 'menu_screen.dart';
 
@@ -43,7 +44,9 @@ class _NewTableScreenState extends State<NewTableScreen> {
 
     if (name.isEmpty || sb == null || sb <= 0 || bb == null || bb <= 0 || buyIn == null || buyIn <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in valid values'), backgroundColor: KarataColors.red),
+        SnackBar(
+            content: Text(AppLocalizations.of(context).fillValidValues),
+            backgroundColor: KarataColors.red),
       );
       return;
     }
@@ -69,7 +72,9 @@ class _NewTableScreenState extends State<NewTableScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not create table: $e'), backgroundColor: KarataColors.red),
+          SnackBar(
+              content: Text(AppLocalizations.of(context).couldNotCreateTable('$e')),
+              backgroundColor: KarataColors.red),
         );
       }
     } finally {
@@ -79,27 +84,28 @@ class _NewTableScreenState extends State<NewTableScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
           children: [
-            const Text(
-              'New table',
-              style: TextStyle(fontSize: 34, fontWeight: FontWeight.w300, color: KarataColors.ink),
+            Text(
+              t.newTableTitle,
+              style: const TextStyle(
+                  fontSize: 34, fontWeight: FontWeight.w300, color: KarataColors.ink),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Name and blinds are all the server keeps. Everything else is set when '
-              'each player sits down.',
-              style: TextStyle(fontSize: 13.5, color: KarataColors.dim, height: 1.45),
+            Text(
+              t.newTableSubtitle,
+              style: const TextStyle(fontSize: 13.5, color: KarataColors.dim, height: 1.45),
             ),
             const SizedBox(height: 24),
             TextField(
               controller: _nameController,
               style: const TextStyle(color: KarataColors.ink),
-              decoration: const InputDecoration(labelText: 'Name'),
+              decoration: InputDecoration(labelText: t.name),
             ),
             const SizedBox(height: 11),
             Row(
@@ -109,7 +115,7 @@ class _NewTableScreenState extends State<NewTableScreen> {
                     controller: _smallBlindController,
                     keyboardType: TextInputType.number,
                     style: const TextStyle(color: KarataColors.ink),
-                    decoration: const InputDecoration(labelText: 'Small blind'),
+                    decoration: InputDecoration(labelText: t.smallBlind),
                   ),
                 ),
                 const SizedBox(width: 11),
@@ -118,26 +124,26 @@ class _NewTableScreenState extends State<NewTableScreen> {
                     controller: _bigBlindController,
                     keyboardType: TextInputType.number,
                     style: const TextStyle(color: KarataColors.ink),
-                    decoration: const InputDecoration(labelText: 'Big blind'),
+                    decoration: InputDecoration(labelText: t.bigBlind),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 24),
-            const Text('Your buy-in',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: KarataColors.ink)),
+            Text(t.yourBuyIn,
+                style: const TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.w600, color: KarataColors.ink)),
             const SizedBox(height: 12),
             TextField(
               controller: _buyInController,
               keyboardType: TextInputType.number,
               style: const TextStyle(color: KarataColors.ink),
-              decoration: const InputDecoration(labelText: 'Chips'),
+              decoration: InputDecoration(labelText: t.chips),
             ),
             const SizedBox(height: 14),
-            const Text(
-              'Creating the table seats you at it. Everyone else picks their own buy-in '
-              'when they join, and chips carry between hands.',
-              style: TextStyle(fontSize: 12, color: KarataColors.dim, height: 1.5),
+            Text(
+              t.newTableFooter,
+              style: const TextStyle(fontSize: 12, color: KarataColors.dim, height: 1.5),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -148,7 +154,7 @@ class _NewTableScreenState extends State<NewTableScreen> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2, color: KarataColors.ink),
                     )
-                  : const Text('Create and sit down'),
+                  : Text(t.createAndSitDown),
             ),
           ],
         ),

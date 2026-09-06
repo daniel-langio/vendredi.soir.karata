@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api_client.dart';
+import '../l10n/app_localizations.dart';
 import '../theme.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -52,7 +53,9 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not log in: $e'), backgroundColor: KarataColors.red),
+          SnackBar(
+              content: Text(AppLocalizations.of(context).couldNotLogIn('$e')),
+              backgroundColor: KarataColors.red),
         );
       }
     } finally {
@@ -62,6 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(),
       body: SafeArea(
@@ -72,22 +76,23 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'Log in',
-                  style: TextStyle(fontSize: 34, fontWeight: FontWeight.w300, color: KarataColors.ink),
+                Text(
+                  t.logIn,
+                  style: const TextStyle(
+                      fontSize: 34, fontWeight: FontWeight.w300, color: KarataColors.ink),
                 ),
                 const SizedBox(height: 26),
                 TextFormField(
                   controller: _usernameController,
-                  decoration: const InputDecoration(labelText: 'Username'),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  decoration: InputDecoration(labelText: t.username),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? t.required : null,
                 ),
                 const SizedBox(height: 11),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Password'),
-                  validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                  decoration: InputDecoration(labelText: t.password),
+                  validator: (v) => (v == null || v.isEmpty) ? t.required : null,
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
@@ -98,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2, color: KarataColors.ink),
                         )
-                      : const Text('Log in'),
+                      : Text(t.logIn),
                 ),
               ],
             ),
