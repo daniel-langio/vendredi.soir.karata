@@ -265,6 +265,10 @@ class _TableScreenState extends State<TableScreen> {
     final communityCards =
         _currentDeal?['communityCards'] as List<dynamic>? ?? [null, null, null, null, null];
     final outcome = _currentDeal?['outcome'] as Map<String, dynamic>?;
+    final revealedHands = <String, Map<String, dynamic>>{
+      for (final rh in (outcome?['revealedHands'] as List<dynamic>? ?? []))
+        (rh as Map<String, dynamic>)['playerId'].toString(): rh,
+    };
 
     return Scaffold(
       backgroundColor: KarataColors.bg,
@@ -320,6 +324,7 @@ class _TableScreenState extends State<TableScreen> {
                       .map((p) => _SeatWidget(
                             player: p as Map<String, dynamic>,
                             activePlayerId: _activePlayerId,
+                            revealedHand: revealedHands[p['playerId']?.toString()],
                           ))
                       .toList(),
                 ),
@@ -642,8 +647,9 @@ String _formatLastAction(AppLocalizations t, String raw) {
 class _SeatWidget extends StatelessWidget {
   final Map<String, dynamic> player;
   final String? activePlayerId;
+  final Map<String, dynamic>? revealedHand;
 
-  const _SeatWidget({required this.player, required this.activePlayerId});
+  const _SeatWidget({required this.player, required this.activePlayerId, this.revealedHand});
 
   @override
   Widget build(BuildContext context) {
@@ -660,6 +666,8 @@ class _SeatWidget extends StatelessWidget {
     final isFolded = status == 'FOLDED';
     final isAllIn = status == 'ALL_IN';
     final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
+    final holeCards = revealedHand?['holeCards'] as List<dynamic>?;
+    final handRank = revealedHand?['handRank'] as String?;
 
     return Opacity(
       opacity: isFolded ? 0.26 : 1,
@@ -761,6 +769,50 @@ class _SeatWidget extends StatelessWidget {
                     style: const TextStyle(
                         color: KarataColors.chipInk, fontSize: 10.5, fontWeight: FontWeight.w600)),
               ),
+            // Cards flip face-up at each seat that reached a real showdown (won or lost) once
+            // the hand concludes - a folded player has no entry here and stays hidden, per usual
+            // poker etiquette.
+            if (holeCards != null && holeCards.length == 2) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: 64,
+                height: 42,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      left: 3,
+                      child: PokerCardWidget(
+                        cardCode: holeCards[0]?.toString(),
+                        width: 30,
+                        height: 42,
+                        rankFontSize: 12,
+                        suitFontSize: 10,
+                      ),
+                    ),
+                    Positioned(
+                      left: 27,
+                      child: PokerCardWidget(
+                        cardCode: holeCards[1]?.toString(),
+                        width: 30,
+                        height: 42,
+                        rankFontSize: 12,
+                        suitFontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (handRank != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(handRank,
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: const TextStyle(fontSize: 8.5, color: KarataColors.dim)),
+                ),
+            ],
           ],
         ),
       ),

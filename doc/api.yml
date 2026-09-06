@@ -195,8 +195,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/WinnerInfo'
+        revealedHands:
+          type: array
+          description: |
+            Every non-folded player's hole cards and hand rank at a real (card-based) showdown,
+            winners and losers alike. Empty when the pot was won uncontested (every other player
+            folded), since hands are never compared or revealed in that case.
+          items:
+            $ref: '#/components/schemas/RevealedHand'
       required:
         - winners
+        - revealedHands
 
     WinnerInfo:
       type: object
@@ -221,6 +230,28 @@ components:
         - playerId
         - username
         - amount
+
+    RevealedHand:
+      type: object
+      properties:
+        playerId:
+          type: string
+          format: uuid
+        username:
+          type: string
+        holeCards:
+          type: array
+          items:
+            type: string
+          description: This player's two hole cards, e.g. ["AS", "TD"].
+        handRank:
+          type: string
+          description: Human-readable hand description, e.g. "two pair, Js and 9s".
+      required:
+        - playerId
+        - username
+        - holeCards
+        - handRank
 
     Card:
       type: string

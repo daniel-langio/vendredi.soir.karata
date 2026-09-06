@@ -15,6 +15,13 @@ public interface Rules {
 
   Map<Player, Hand> evaluateWinners(Deal deal, List<Player> players);
 
+  /**
+   * Every non-folded player's best hand at a real (card-based) showdown, winners and losers alike -
+   * unlike {@link #evaluateWinners}, which narrows this down to only the tied-for-best hand(s) used
+   * to award the pot.
+   */
+  Map<Player, Hand> evaluateShowdownHands(Deal deal, List<Player> players);
+
   long getMinimumRaise(Deal deal);
 
   List<Player> getBettingOrder(List<Player> players);

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import vendredi.soir.karata.core.action.AwardPot;
 import vendredi.soir.karata.core.entity.Card;
 import vendredi.soir.karata.core.entity.Deal;
+import vendredi.soir.karata.core.entity.Hand;
 import vendredi.soir.karata.core.entity.Player;
 import vendredi.soir.karata.core.factory.HandFactory;
 import vendredi.soir.karata.endpoint.rest.model.*;
@@ -149,6 +150,26 @@ public class RestMapper {
                       handRank);
                 })
             .toList();
-    return new DealOutcome(winners);
+
+    List<RevealedHand> revealedHands = List.of();
+    if (realShowdown) {
+      Map<Player, Hand> showdownHands =
+          game.getRules().evaluateShowdownHands(deal, deal.filterDealtIn(game.getPlayers()));
+      // Stable, deterministic order (the map itself has none) - same order the players are
+      // listed in everywhere else on this game.
+      revealedHands =
+          game.getPlayers().stream()
+              .filter(showdownHands::containsKey)
+              .map(
+                  p ->
+                      new RevealedHand(
+                          UUID.nameUUIDFromBytes(p.getName().getBytes()),
+                          p.getName(),
+                          deal.getHoleCards(p).stream().map(Card::toString).toList(),
+                          showdownHands.get(p).describe()))
+              .toList();
+    }
+
+    return new DealOutcome(winners, revealedHands);
   }
 }

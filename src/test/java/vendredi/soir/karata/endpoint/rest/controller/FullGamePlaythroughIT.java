@@ -111,6 +111,16 @@ class FullGamePlaythroughIT extends FacadeIT {
         .winners()
         .forEach(w -> assertNotNull(w.handRank(), "a real showdown must reveal a hand rank"));
 
+    // Both heads-up players reached showdown (neither folded), so both hands should be revealed.
+    assertEquals(2, outcome.revealedHands().size(), "both players' hands should be revealed");
+    outcome
+        .revealedHands()
+        .forEach(
+            rh -> {
+              assertEquals(2, rh.holeCards().size(), "each revealed hand has 2 hole cards");
+              assertNotNull(rh.handRank());
+            });
+
     // Once the hand is over, no further action should be accepted.
     HttpEntity<ActionRequest> lateAction = authorized("alice", new ActionRequest("CHECK", null));
     ResponseEntity<Void> rejected =

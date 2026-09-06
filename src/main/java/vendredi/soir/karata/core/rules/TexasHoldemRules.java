@@ -73,6 +73,17 @@ public class TexasHoldemRules implements Rules {
       return soleWinner;
     }
 
+    Map<Player, Hand> bestHands = evaluateShowdownHands(deal, players);
+    if (bestHands.isEmpty()) return Map.of();
+
+    Hand winningHand = bestHands.values().stream().max(Hand::compareTo).get();
+    return bestHands.entrySet().stream()
+        .filter(e -> e.getValue().compareTo(winningHand) == 0)
+        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+  }
+
+  @Override
+  public Map<Player, Hand> evaluateShowdownHands(Deal deal, List<Player> players) {
     Map<Player, Hand> bestHands = new HashMap<>();
     for (Player p : players) {
       if (!deal.hasFolded(p)) {
@@ -83,13 +94,7 @@ public class TexasHoldemRules implements Rules {
         }
       }
     }
-
-    if (bestHands.isEmpty()) return Map.of();
-
-    Hand winningHand = bestHands.values().stream().max(Hand::compareTo).get();
-    return bestHands.entrySet().stream()
-        .filter(e -> e.getValue().compareTo(winningHand) == 0)
-        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    return bestHands;
   }
 
   @Override
