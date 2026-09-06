@@ -50,6 +50,14 @@ jobs:
       - run: chmod +x format.sh
       - run: ./format.sh && git diff --exit-code
 
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4.1.6
+      - run: docker build .
+
   web-ui:
     runs-on: ubuntu-latest
     timeout-minutes: 20

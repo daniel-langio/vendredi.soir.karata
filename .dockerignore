@@ -1,0 +1,12 @@
+.git
+.github
+.gradle
+.claude
+.shell
+.aws-sam
+build
+web-ui
+report.md
+README.md
+AGENTS.md
+google-java-format-1.23.0-all-deps.jar
