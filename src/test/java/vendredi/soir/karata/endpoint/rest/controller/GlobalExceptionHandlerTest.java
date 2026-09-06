@@ -3,31 +3,36 @@ package vendredi.soir.karata.endpoint.rest.controller;
 import static org.mockito.Mockito.*;
 
 import jakarta.servlet.RequestDispatcher;
-import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.net.URL;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 class GlobalExceptionHandlerTest {
 
-  private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
+  private final ResourceLoader resourceLoader = mock(ResourceLoader.class);
+  private final GlobalExceptionHandler handler = new GlobalExceptionHandler(resourceLoader);
   private final NoResourceFoundException exception =
       new NoResourceFoundException(org.springframework.http.HttpMethod.GET, "/whatever");
+
+  private void stubIndexHtmlExists(boolean exists) {
+    Resource resource = mock(Resource.class);
+    when(resource.exists()).thenReturn(exists);
+    when(resourceLoader.getResource("classpath:/static/index.html")).thenReturn(resource);
+  }
 
   @Test
   void forwards_to_index_html_when_it_exists_and_the_request_is_for_something_else()
       throws Exception {
     HttpServletRequest request = mock(HttpServletRequest.class);
     HttpServletResponse response = mock(HttpServletResponse.class);
-    ServletContext context = mock(ServletContext.class);
     RequestDispatcher dispatcher = mock(RequestDispatcher.class);
 
     when(request.getRequestURI()).thenReturn("/table/some-game-id");
-    when(request.getServletContext()).thenReturn(context);
-    when(context.getResource("/index.html")).thenReturn(new URL("file:/index.html"));
     when(request.getRequestDispatcher("/index.html")).thenReturn(dispatcher);
+    stubIndexHtmlExists(true);
 
     handler.handleMissingStaticResource(exception, request, response);
 
@@ -42,11 +47,9 @@ class GlobalExceptionHandlerTest {
     // forward again, forever - a real StackOverflowError seen on a live deployment.
     HttpServletRequest request = mock(HttpServletRequest.class);
     HttpServletResponse response = mock(HttpServletResponse.class);
-    ServletContext context = mock(ServletContext.class);
 
     when(request.getRequestURI()).thenReturn("/some/spa/route");
-    when(request.getServletContext()).thenReturn(context);
-    when(context.getResource("/index.html")).thenReturn(null);
+    stubIndexHtmlExists(false);
 
     handler.handleMissingStaticResource(exception, request, response);
 
@@ -59,11 +62,9 @@ class GlobalExceptionHandlerTest {
       throws Exception {
     HttpServletRequest request = mock(HttpServletRequest.class);
     HttpServletResponse response = mock(HttpServletResponse.class);
-    ServletContext context = mock(ServletContext.class);
 
     when(request.getRequestURI()).thenReturn("/index.html");
-    when(request.getServletContext()).thenReturn(context);
-    when(context.getResource("/index.html")).thenReturn(new URL("file:/index.html"));
+    stubIndexHtmlExists(true);
 
     handler.handleMissingStaticResource(exception, request, response);
 
@@ -72,7 +73,7 @@ class GlobalExceptionHandlerTest {
   }
 
   @Test
-  void api_and_health_paths_always_get_a_plain_404_without_touching_the_servlet_context()
+  void api_and_health_paths_always_get_a_plain_404_without_checking_for_index_html()
       throws Exception {
     HttpServletRequest request = mock(HttpServletRequest.class);
     HttpServletResponse response = mock(HttpServletResponse.class);
@@ -82,6 +83,6 @@ class GlobalExceptionHandlerTest {
     handler.handleMissingStaticResource(exception, request, response);
 
     verify(response).sendError(eq(404), anyString());
-    verify(request, never()).getServletContext();
+    verify(resourceLoader, never()).getResource(anyString());
   }
 }

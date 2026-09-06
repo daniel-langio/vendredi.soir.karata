@@ -3,6 +3,7 @@ package vendredi.soir.karata.endpoint.rest.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.NoSuchElementException;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -13,6 +14,12 @@ import vendredi.soir.karata.endpoint.rest.model.Error;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+  private final ResourceLoader resourceLoader;
+
+  public GlobalExceptionHandler(ResourceLoader resourceLoader) {
+    this.resourceLoader = resourceLoader;
+  }
 
   /**
    * The web-ui SPA (static resources) uses real per-page paths (e.g. /table/{gameId}) via Flutter's
@@ -43,9 +50,15 @@ public class GlobalExceptionHandler {
     // forever (a missing index.html "not found" forwards to index.html, which is still missing,
     // forwards again, ...) until the request thread dies with a StackOverflowError. Only forward
     // when index.html actually exists, and never for a request that's already for it.
+    //
+    // ServletContext.getResource() looks at the embedded Tomcat webapp root, which is empty for
+    // a Spring Boot fat jar - it does NOT see index.html served from the classpath (static/,
+    // resources/, META-INF/resources/, public/), which is where Spring's own static resource
+    // handler actually finds it. Check the same classpath location build_web_ui.sh copies it
+    // into instead.
     boolean indexHtmlExists =
         !path.equals("/index.html")
-            && request.getServletContext().getResource("/index.html") != null;
+            && resourceLoader.getResource("classpath:/static/index.html").exists();
 
     if (!indexHtmlExists) {
       response.sendError(HttpStatus.NOT_FOUND.value(), e.getMessage());
