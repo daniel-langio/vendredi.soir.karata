@@ -219,8 +219,12 @@ class _TableScreenState extends State<TableScreen> {
     try {
       await _apiClient.leaveTable(widget.gameId);
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(
+      // Clears the whole stack rather than just replacing this screen - normally reached via
+      // Menu pushing this table on top of itself, so a plain replace would leave that earlier
+      // Menu instance underneath and show as a stray back button.
+      Navigator.of(context).pushNamedAndRemoveUntil(
         '/menu',
+        (route) => false,
         arguments: {
           'serverUrl': widget.serverUrl,
           'token': widget.token,

@@ -176,8 +176,9 @@ class _RootScreenState extends State<RootScreen> {
 
     if (serverUrl != null && serverUrl.isNotEmpty && token != null && token.isNotEmpty && username != null) {
       setState(() => _hasSession = true);
-      Navigator.of(context).pushReplacementNamed(
+      Navigator.of(context).pushNamedAndRemoveUntil(
         '/menu',
+        (route) => false,
         arguments: {'serverUrl': serverUrl, 'token': token, 'username': username},
       );
     } else {

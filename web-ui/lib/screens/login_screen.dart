@@ -41,8 +41,11 @@ class _LoginScreenState extends State<LoginScreen> {
       await prefs.setString('username', username);
 
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed(
+        // Clears the whole stack (not just this screen) - reached via WelcomeScreen's
+        // RootScreen, which would otherwise linger below Menu and show as a stray back button.
+        Navigator.of(context).pushNamedAndRemoveUntil(
           '/menu',
+          (route) => false,
           arguments: {'serverUrl': widget.serverUrl, 'token': token, 'username': username},
         );
       }

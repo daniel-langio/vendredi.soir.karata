@@ -74,7 +74,7 @@ class _MenuScreenState extends State<MenuScreen> {
     await prefs.remove('jwt_token');
     await prefs.remove('username');
     if (mounted) {
-      Navigator.of(context).pushReplacementNamed('/');
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
     }
   }
 
