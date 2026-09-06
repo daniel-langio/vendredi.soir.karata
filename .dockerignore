@@ -2,10 +2,10 @@
 .github
 .gradle
 .claude
-.shell
 .aws-sam
 build
-web-ui
+web-ui/build
+web-ui/.dart_tool
 report.md
 README.md
 AGENTS.md

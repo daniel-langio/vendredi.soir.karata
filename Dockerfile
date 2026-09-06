@@ -1,6 +1,17 @@
 # syntax=docker/dockerfile:1
 
-# ---- Build stage ----
+# ---- Web UI build stage ----
+# Matches the old same-origin setup (see cd-compute.yml / .shell/build_web_ui.sh): the SPA is
+# built here and copied into src/main/resources/static/ before the Java build below, so Spring
+# serves it from the same origin as /poker/* - no CORS needed.
+FROM ghcr.io/cirruslabs/flutter:3.41.2 AS web-ui-build
+WORKDIR /repo
+
+COPY .shell/build_web_ui.sh .shell/build_web_ui.sh
+COPY web-ui web-ui
+RUN chmod +x .shell/build_web_ui.sh && .shell/build_web_ui.sh
+
+# ---- Build stage (Java) ----
 FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 
@@ -10,6 +21,7 @@ RUN chmod +x gradlew
 
 COPY src ./src
 COPY doc ./doc
+COPY --from=web-ui-build /repo/src/main/resources/static ./src/main/resources/static
 
 # Tests need Testcontainers (Docker-in-Docker) and already run in CI - skip them here so the
 # image build only needs to compile and package.
