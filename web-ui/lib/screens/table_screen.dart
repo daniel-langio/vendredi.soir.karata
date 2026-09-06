@@ -628,20 +628,30 @@ class _SeatWidget extends StatelessWidget {
         child: Column(
           children: [
             if (lastAction != null)
-              Container(
-                margin: const EdgeInsets.only(bottom: 5),
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(
-                  color: KarataColors.live,
-                  borderRadius: BorderRadius.circular(999),
+              // Keying on the action text itself restarts this tween from scratch every time it
+              // changes to a genuinely new value (including its first appearance), giving a brief
+              // "just happened" pop without any manual AnimationController bookkeeping.
+              TweenAnimationBuilder<double>(
+                key: ValueKey(lastAction),
+                tween: Tween(begin: 1.4, end: 1.0),
+                duration: const Duration(milliseconds: 380),
+                curve: Curves.easeOutBack,
+                builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: KarataColors.live,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(lastAction,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          color: KarataColors.cardInk,
+                          height: 1)),
                 ),
-                child: Text(lastAction,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w700,
-                        color: KarataColors.cardInk,
-                        height: 1)),
               ),
             SizedBox(
               width: 64,
