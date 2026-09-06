@@ -628,12 +628,20 @@ class _SeatWidget extends StatelessWidget {
         child: Column(
           children: [
             if (lastAction != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
+              Container(
+                margin: const EdgeInsets.only(bottom: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: KarataColors.live,
+                  borderRadius: BorderRadius.circular(999),
+                ),
                 child: Text(lastAction,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                        fontSize: 8, fontWeight: FontWeight.bold, color: KarataColors.dim)),
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w700,
+                        color: KarataColors.cardInk,
+                        height: 1)),
               ),
             SizedBox(
               width: 64,
