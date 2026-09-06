@@ -27,6 +27,18 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: karataTheme(),
       onGenerateRoute: _onGenerateRoute,
+      // This UI was designed as a phone screen, not a desktop page - on a wide browser window it
+      // just looked like that same phone layout stretched edge to edge. Cap it at a phone-ish
+      // width and center it instead, same as most mobile-first web apps do.
+      builder: (context, child) => ColoredBox(
+        color: KarataColors.bg,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: child,
+          ),
+        ),
+      ),
     );
   }
 }
