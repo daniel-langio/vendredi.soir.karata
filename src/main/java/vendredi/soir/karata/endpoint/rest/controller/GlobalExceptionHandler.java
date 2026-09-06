@@ -37,6 +37,20 @@ public class GlobalExceptionHandler {
       response.sendError(HttpStatus.NOT_FOUND.value(), e.getMessage());
       return;
     }
+
+    // Deployments that don't bundle the web-ui SPA (e.g. this API alone on Render) have no
+    // index.html at all - forwarding there unconditionally would re-trigger this same handler
+    // forever (a missing index.html "not found" forwards to index.html, which is still missing,
+    // forwards again, ...) until the request thread dies with a StackOverflowError. Only forward
+    // when index.html actually exists, and never for a request that's already for it.
+    boolean indexHtmlExists =
+        !path.equals("/index.html")
+            && request.getServletContext().getResource("/index.html") != null;
+
+    if (!indexHtmlExists) {
+      response.sendError(HttpStatus.NOT_FOUND.value(), e.getMessage());
+      return;
+    }
     request.getRequestDispatcher("/index.html").forward(request, response);
   }
 
