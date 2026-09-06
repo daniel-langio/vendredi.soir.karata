@@ -20,7 +20,9 @@ FROM eclipse-temurin:21-jre
 WORKDIR /app
 
 COPY --from=build /app/build/libs/*.jar app.jar
-COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-ENTRYPOINT ["docker-entrypoint.sh"]
+# Env vars (PORT, DATABASE_URL, JWT_SECRET, ...) are picked up directly by Spring from
+# application.properties' placeholders - no shell wrapper needed. DATABASE_URL specifically gets
+# reshaped from Render's postgres:// form into what Spring's JDBC driver expects by
+# RenderDatabaseUrlEnvironmentPostProcessor, inside the app itself.
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
