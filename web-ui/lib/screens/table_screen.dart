@@ -74,6 +74,11 @@ class _TableScreenState extends State<TableScreen> {
     return me != null && _activePlayerId != null && _activePlayerId == me['playerId']?.toString();
   }
 
+  /// Whether the current user is a seated player of this game (has bought in at some point and
+  /// hasn't since fully dropped out) rather than just watching - e.g. someone who opened an
+  /// invite link without ever sitting down, or who left mid-hand and that hand has since ended.
+  bool get _isPlaying => _players.any((p) => p['username'] == widget.username);
+
   /// The server's authoritative deadline for whoever's on the clock to act - see
   /// DealService.enforceTurnTimeout on the backend, which auto-folds past this point.
   DateTime? get _turnDeadline {
@@ -321,6 +326,7 @@ class _TableScreenState extends State<TableScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: _players
+                      .where((p) => p['username'] != widget.username)
                       .map((p) => _SeatWidget(
                             player: p as Map<String, dynamic>,
                             activePlayerId: _activePlayerId,
@@ -348,7 +354,7 @@ class _TableScreenState extends State<TableScreen> {
                         ),
                         if (outcome != null) ...[
                           const SizedBox(height: 14),
-                          _OutcomeBanner(outcome: outcome),
+                          _OutcomeBanner(outcome: outcome, myUsername: widget.username),
                         ],
                       ],
                     ),
@@ -361,7 +367,9 @@ class _TableScreenState extends State<TableScreen> {
                   const SizedBox(height: 11),
                 ],
                 _buildActionArea(),
-                const SizedBox(height: 22),
+                const SizedBox(height: 14),
+                _buildSelfStatus(),
+                const SizedBox(height: 8),
                 _buildHandRow(),
               ],
             ),
@@ -445,9 +453,14 @@ class _TableScreenState extends State<TableScreen> {
     }
 
     if (_phase == 'SHOWDOWN') {
+      // A spectator (never bought in, or left and that hand has since ended) can watch but not
+      // deal themselves into the next hand - the button becomes an inert label instead.
       return SizedBox(
         width: double.infinity,
-        child: ElevatedButton(onPressed: _startHand, child: Text(t.nextHand)),
+        child: ElevatedButton(
+          onPressed: _isPlaying ? _startHand : null,
+          child: Text(_isPlaying ? t.nextHand : t.spectating),
+        ),
       );
     }
 
@@ -580,6 +593,26 @@ class _TableScreenState extends State<TableScreen> {
           ),
           child: Text(label, style: const TextStyle(fontSize: 12.5)),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSelfStatus() {
+    final t = AppLocalizations.of(context);
+    final playing = _isPlaying;
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: playing ? KarataColors.chipBg : const Color(0xFF2E2C34),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(playing ? t.playing : t.spectating,
+            style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                color: playing ? KarataColors.chipInk : KarataColors.dim)),
       ),
     );
   }
@@ -972,25 +1005,29 @@ class _MutedHoleCard extends StatelessWidget {
 
 class _OutcomeBanner extends StatelessWidget {
   final Map<String, dynamic> outcome;
-  const _OutcomeBanner({required this.outcome});
+  final String myUsername;
+  const _OutcomeBanner({required this.outcome, required this.myUsername});
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final winners = outcome['winners'] as List<dynamic>? ?? [];
     if (winners.isEmpty) return const SizedBox();
-    final names = winners.map((w) => w['username']).join(' & ');
+    final names = winners
+        .map((w) => w['username'] == myUsername ? t.you : w['username'].toString())
+        .join(' & ');
     final total = winners.fold<int>(0, (sum, w) => sum + ((w['amount'] as num?)?.toInt() ?? 0));
     final rank = (winners.first as Map<String, dynamic>)['handRank'] as String?;
-    return Wrap(
-      alignment: WrapAlignment.end,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 9,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(AppLocalizations.of(context).won(names, total),
+        Text(t.won(names, total),
             style: const TextStyle(
                 color: KarataColors.ink, fontSize: 14.5, fontWeight: FontWeight.w500)),
-        if (rank != null)
+        if (rank != null) ...[
+          const SizedBox(height: 4),
           Text(rank, style: const TextStyle(color: KarataColors.dim, fontSize: 12.5)),
+        ],
       ],
     );
   }
