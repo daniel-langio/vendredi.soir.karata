@@ -468,12 +468,19 @@ class _TableScreenState extends State<TableScreen> {
     final you = _you;
     final callAmount = (you?['callAmount'] as num?)?.toInt() ?? 0;
     final minRaise = (you?['minRaise'] as num?)?.toInt() ?? 20;
+    final maxRaise = (you?['maxRaise'] as num?)?.toInt() ?? 0;
     final currentRoundBet = (_currentDeal?['currentRoundBet'] as num?)?.toInt() ?? 0;
     final raiseType = currentRoundBet == 0 ? 'BET' : 'RAISE';
     final sizerOpen = _selectedActionType == raiseType;
     final raiseAmount = sizerOpen ? _sizerAmount : minRaise;
     final callLabel = callAmount == 0 ? t.check : t.call(callAmount);
     final raiseLabel = currentRoundBet == 0 ? t.bet(raiseAmount) : t.raise(raiseAmount);
+    // Both mirror real backend rejections (TexasHoldemRules.isActionLegal) - a call needs enough
+    // chips to cover it in full (no side-pot/all-in-for-less support yet), and a raise/bet must
+    // meet the table's minimum, which a short stack sometimes can't - gray those out instead of
+    // letting the request fail server-side.
+    final canCall = callAmount == 0 || maxRaise >= callAmount;
+    final canRaise = maxRaise > 0 && maxRaise >= minRaise;
 
     return Row(
       children: [
@@ -488,7 +495,7 @@ class _TableScreenState extends State<TableScreen> {
         Expanded(
           child: _ActBtn(
             label: callLabel,
-            enabled: mine,
+            enabled: mine && canCall,
             solid: mine,
             onPressed: () =>
                 callAmount == 0 ? _submitAction('CHECK') : _submitAction('CALL', amount: callAmount),
@@ -498,7 +505,7 @@ class _TableScreenState extends State<TableScreen> {
         Expanded(
           child: _ActBtn(
             label: raiseLabel,
-            enabled: mine,
+            enabled: mine && canRaise,
             onPressed: () => sizerOpen
                 ? _submitAction(raiseType, amount: _sizerAmount)
                 : _submitAction(raiseType, amount: minRaise),
@@ -507,7 +514,7 @@ class _TableScreenState extends State<TableScreen> {
         const SizedBox(width: 9),
         _BumpBtn(
           on: sizerOpen,
-          enabled: mine,
+          enabled: mine && canRaise,
           onPressed: () => _toggleSizer(raiseType),
         ),
       ],
@@ -600,20 +607,36 @@ class _TableScreenState extends State<TableScreen> {
   Widget _buildSelfStatus() {
     final t = AppLocalizations.of(context);
     final playing = _isPlaying;
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: playing ? KarataColors.chipBg : const Color(0xFF2E2C34),
-          borderRadius: BorderRadius.circular(999),
+    final me = _players.firstWhere((p) => p['username'] == widget.username, orElse: () => null)
+        as Map<String, dynamic>?;
+    final myChips = me?['chips']?.toString();
+    final myLastActionRaw = me?['lastAction']?.toString();
+    final myLastAction = myLastActionRaw != null ? _formatLastAction(t, myLastActionRaw) : null;
+
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: playing ? KarataColors.chipBg : const Color(0xFF2E2C34),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(playing ? t.playing : t.spectating,
+              style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  color: playing ? KarataColors.chipInk : KarataColors.dim)),
         ),
-        child: Text(playing ? t.playing : t.spectating,
-            style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w600,
-                color: playing ? KarataColors.chipInk : KarataColors.dim)),
-      ),
+        if (myChips != null) ...[
+          const SizedBox(width: 10),
+          Text(myChips,
+              style: const TextStyle(
+                  fontSize: 13, color: KarataColors.ink, fontWeight: FontWeight.w500)),
+        ],
+        const Spacer(),
+        if (myLastAction != null)
+          _LastActionBadge(rawAction: myLastActionRaw!, displayText: myLastAction),
+      ],
     );
   }
 
@@ -709,31 +732,9 @@ class _SeatWidget extends StatelessWidget {
         child: Column(
           children: [
             if (lastAction != null)
-              // Keying on the action text itself restarts this tween from scratch every time it
-              // changes to a genuinely new value (including its first appearance), giving a brief
-              // "just happened" pop without any manual AnimationController bookkeeping.
-              TweenAnimationBuilder<double>(
-                key: ValueKey(lastActionRaw), // raw, not the localized text - a language switch
-                // shouldn't replay this pop, only a genuinely new action should.
-                tween: Tween(begin: 1.4, end: 1.0),
-                duration: const Duration(milliseconds: 380),
-                curve: Curves.easeOutBack,
-                builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 5),
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: KarataColors.live,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(lastAction,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w700,
-                          color: KarataColors.cardInk,
-                          height: 1)),
-                ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 5),
+                child: _LastActionBadge(rawAction: lastActionRaw!, displayText: lastAction),
               ),
             SizedBox(
               width: 64,
@@ -848,6 +849,38 @@ class _SeatWidget extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _LastActionBadge extends StatelessWidget {
+  final String rawAction;
+  final String displayText;
+  const _LastActionBadge({required this.rawAction, required this.displayText});
+
+  @override
+  Widget build(BuildContext context) {
+    // Keying on the raw action restarts this tween from scratch every time it changes to a
+    // genuinely new value (including its first appearance), giving a brief "just happened" pop
+    // without any manual AnimationController bookkeeping. Raw, not the localized display text, so
+    // a language switch doesn't replay this pop - only a genuinely new action should.
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(rawAction),
+      tween: Tween(begin: 1.4, end: 1.0),
+      duration: const Duration(milliseconds: 380),
+      curve: Curves.easeOutBack,
+      builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(color: KarataColors.live, borderRadius: BorderRadius.circular(999)),
+        child: Text(displayText,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w700,
+                color: KarataColors.cardInk,
+                height: 1)),
       ),
     );
   }
