@@ -27,7 +27,7 @@ public class PokerController {
   @ResponseStatus(HttpStatus.CREATED)
   public Game create(@RequestBody CreateGameRequest r) {
     validateCreateGame(r);
-    GameEntity ge = gs.createGame(r.name(), r.blinds().small(), r.blinds().big());
+    GameEntity ge = gs.createGame(r.name(), r.blinds().small(), r.blinds().big(), r.defaultBuyIn());
     return rm.toRest(gs.getGame(ge.getId()), ge, null, null, Set.of());
   }
 
@@ -121,6 +121,9 @@ public class PokerController {
     if (r.blinds().big() < r.blinds().small()) {
       throw new BadRequestException("Big blind must be greater than or equal to small blind");
     }
+    if (r.defaultBuyIn() != null && r.defaultBuyIn() <= 0) {
+      throw new BadRequestException("Default buy-in must be strictly positive");
+    }
   }
 
   private void validateJoinGame(JoinRequest r) {
@@ -152,7 +155,7 @@ public class PokerController {
     }
   }
 
-  public record CreateGameRequest(String name, Blinds blinds) {}
+  public record CreateGameRequest(String name, Blinds blinds, Long defaultBuyIn) {}
 
   public record JoinRequest(Long buyInAmount) {}
 }

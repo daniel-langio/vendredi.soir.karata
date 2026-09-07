@@ -39,18 +39,27 @@ class ApiClient {
   }
 
   /// POST /games
-  /// Create a new game table
-  Future<Map<String, dynamic>> createGame(String name, int smallBlind, int bigBlind) async {
+  /// Create a new game table. defaultBuyIn (if given) is kept by the server as the table's
+  /// suggested buy-in for anyone joining later - see JoinTableScreen.
+  Future<Map<String, dynamic>> createGame(
+    String name,
+    int smallBlind,
+    int bigBlind, {
+    int? defaultBuyIn,
+  }) async {
+    final body = <String, dynamic>{
+      'name': name,
+      'blinds': {
+        'small': smallBlind,
+        'big': bigBlind,
+      },
+    };
+    if (defaultBuyIn != null) body['defaultBuyIn'] = defaultBuyIn;
+
     final response = await http.post(
       Uri.parse('$baseUrl/games'),
       headers: _headers,
-      body: jsonEncode({
-        'name': name,
-        'blinds': {
-          'small': smallBlind,
-          'big': bigBlind,
-        },
-      }),
+      body: jsonEncode(body),
     );
 
     if (response.statusCode == 201) {

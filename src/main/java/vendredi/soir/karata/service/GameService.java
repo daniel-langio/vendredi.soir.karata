@@ -23,9 +23,15 @@ public class GameService {
   private final ActionMapper actionMapper;
 
   @Transactional
-  public GameEntity createGame(String name, Long sb, Long bb) {
+  public GameEntity createGame(String name, Long sb, Long bb, Long defaultBuyIn) {
     return gameRepository.save(
-        GameEntity.builder().id(UUID.randomUUID()).name(name).smallBlind(sb).bigBlind(bb).build());
+        GameEntity.builder()
+            .id(UUID.randomUUID())
+            .name(name)
+            .smallBlind(sb)
+            .bigBlind(bb)
+            .defaultBuyIn(defaultBuyIn)
+            .build());
   }
 
   @Transactional

@@ -55,7 +55,7 @@ class _NewTableScreenState extends State<NewTableScreen> {
     setState(() => _isLoading = true);
     try {
       final client = ApiClient(baseUrl: widget.serverUrl, token: widget.token);
-      final game = await client.createGame(name, sb, bb);
+      final game = await client.createGame(name, sb, bb, defaultBuyIn: buyIn);
       final gameId = game['gameId'] as String;
       await client.buyIn(gameId, buyIn);
       await saveRecentTable(gameId, name);

@@ -59,9 +59,13 @@ class _JoinTableScreenState extends State<JoinTableScreen> {
       final client = ApiClient(baseUrl: widget.serverUrl, token: widget.token);
       final game = await client.getGame(gameId);
       final players = (game['players'] as List<dynamic>? ?? []);
+      final defaultBuyIn = (game['defaultBuyIn'] as num?)?.toInt();
       setState(() {
         _preview = game;
         _alreadySeated = players.any((p) => p['username'] == widget.username);
+        // The table creator's own buy-in, kept by the server as a suggested default - if they
+        // never set one, fall back to whatever was already in the field.
+        if (defaultBuyIn != null) _buyInController.text = '$defaultBuyIn';
       });
     } catch (e) {
       if (mounted) {

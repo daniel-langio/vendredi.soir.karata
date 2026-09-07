@@ -38,7 +38,7 @@ class PokerControllerIT {
   @Test
   void test_create_game_validation() throws Exception {
     // Missing name
-    CreateGameRequest invalid1 = new CreateGameRequest("", new Blinds(10L, 20L));
+    CreateGameRequest invalid1 = new CreateGameRequest("", new Blinds(10L, 20L), null);
     mockMvc
         .perform(
             post("/poker/games")
@@ -49,7 +49,7 @@ class PokerControllerIT {
         .andExpect(jsonPath("$.message").value("Game name is required"));
 
     // Invalid blinds
-    CreateGameRequest invalid2 = new CreateGameRequest("Table", new Blinds(-10L, 20L));
+    CreateGameRequest invalid2 = new CreateGameRequest("Table", new Blinds(-10L, 20L), null);
     mockMvc
         .perform(
             post("/poker/games")

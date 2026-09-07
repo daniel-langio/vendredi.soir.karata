@@ -97,7 +97,8 @@ public class RestMapper {
         currentDealId,
         toRest(deal, currentDealId, game, turnDeadline),
         you(game, requestingUsername),
-        entity.getClosed());
+        entity.getClosed(),
+        entity.getDefaultBuyIn());
   }
 
   private YouState you(vendredi.soir.karata.core.entity.Game game, String requestingUsername) {

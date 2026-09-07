@@ -51,6 +51,13 @@ components:
         closed:
           type: boolean
           description: Once true, the table is permanently done - no more joins, deals, or actions.
+        defaultBuyIn:
+          type: integer
+          format: int64
+          nullable: true
+          description: |
+            The buy-in amount the table's creator used when they sat down, kept as a suggested
+            default for anyone else buying in later. Null if the creator didn't set one.
       required:
         - gameId
         - blinds
@@ -418,6 +425,13 @@ paths:
                   type: string
                 blinds:
                   $ref: '#/components/schemas/Blinds'
+                defaultBuyIn:
+                  type: integer
+                  format: int64
+                  nullable: true
+                  description: |
+                    Optional. Kept as the table's suggested default buy-in for anyone joining
+                    later (see Game.defaultBuyIn).
               required:
                 - name
                 - blinds

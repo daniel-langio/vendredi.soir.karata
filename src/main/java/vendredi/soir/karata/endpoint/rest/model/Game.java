@@ -12,4 +12,5 @@ public record Game(
     UUID currentDealId,
     DealState currentDeal,
     YouState you,
-    Boolean closed) {}
+    Boolean closed,
+    Long defaultBuyIn) {}

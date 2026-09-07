@@ -192,6 +192,30 @@ class FullGamePlaythroughIT extends FacadeIT {
         "starting a deal with fewer than 2 eligible players should fail");
   }
 
+  @Test
+  void default_buy_in_set_at_creation_is_persisted_and_returned() {
+    Map<String, Object> body =
+        Map.of(
+            "name",
+            "Default Buy-In Test",
+            "blinds",
+            Map.of("small", 10, "big", 20),
+            "defaultBuyIn",
+            1500);
+    ResponseEntity<Game> created = rest.postForEntity("/poker/games", body, Game.class);
+    assertEquals(HttpStatus.CREATED, created.getStatusCode());
+    assertEquals(1500L, created.getBody().defaultBuyIn());
+
+    Game fetched = getGame(created.getBody().gameId());
+    assertEquals(1500L, fetched.defaultBuyIn(), "defaultBuyIn should survive a real DB round trip");
+  }
+
+  @Test
+  void default_buy_in_is_null_when_not_provided_at_creation() {
+    UUID gameId = createGame("No Default Buy-In Test", 10, 20);
+    assertNull(getGame(gameId).defaultBuyIn());
+  }
+
   private void leave(UUID gameId, String username) {
     HttpEntity<Void> req = authorized(username, null);
     ResponseEntity<Void> resp =

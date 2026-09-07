@@ -58,7 +58,7 @@ class PokerGameTest {
     when(gameRepository.findById(gameId)).thenReturn(Optional.of(gameEntity));
     when(gameRepository.findByIdForUpdate(gameId)).thenReturn(Optional.of(gameEntity));
 
-    gameService.createGame("High Stakes", 10L, 20L);
+    gameService.createGame("High Stakes", 10L, 20L, null);
 
     List<PlayerEntity> players = new ArrayList<>();
     when(playerRepository.findByGameId(gameId)).thenReturn(players);
