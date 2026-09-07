@@ -1,0 +1,16 @@
+.git
+.github
+.gradle
+.claude
+.aws-sam
+build
+web-ui/build
+web-ui/.dart_tool
+report.md
+README.md
+AGENTS.md
+google-java-format-1.23.0-all-deps.jar
+
+### Local secrets, never uploaded to Cloud Build ###
+.env
+.env.*
