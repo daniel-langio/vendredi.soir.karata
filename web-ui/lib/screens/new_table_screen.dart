@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../l10n/app_localizations.dart';
+import '../table_name_generator.dart';
 import '../theme.dart';
 import 'menu_screen.dart';
 
@@ -21,7 +22,7 @@ class NewTableScreen extends StatefulWidget {
 }
 
 class _NewTableScreenState extends State<NewTableScreen> {
-  final _nameController = TextEditingController(text: 'Friday Night Poker');
+  final _nameController = TextEditingController(text: generateTableName());
   final _smallBlindController = TextEditingController(text: '10');
   final _bigBlindController = TextEditingController(text: '20');
   final _buyInController = TextEditingController(text: '1000');
@@ -102,10 +103,22 @@ class _NewTableScreenState extends State<NewTableScreen> {
               style: const TextStyle(fontSize: 13.5, color: KarataColors.dim, height: 1.45),
             ),
             const SizedBox(height: 24),
-            TextField(
-              controller: _nameController,
-              style: const TextStyle(color: KarataColors.ink),
-              decoration: InputDecoration(labelText: t.name),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _nameController,
+                    style: const TextStyle(color: KarataColors.ink),
+                    decoration: InputDecoration(labelText: t.name),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.shuffle),
+                  tooltip: t.generateTableName,
+                  onPressed: () => setState(() => _nameController.text = generateTableName()),
+                ),
+              ],
             ),
             const SizedBox(height: 11),
             Row(

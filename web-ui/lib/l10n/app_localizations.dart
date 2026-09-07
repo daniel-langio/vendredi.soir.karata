@@ -67,6 +67,7 @@ class AppLocalizations {
   String get newTableTitle => _s('newTableTitle');
   String get newTableSubtitle => _s('newTableSubtitle');
   String get name => _s('name');
+  String get generateTableName => _s('generateTableName');
   String get smallBlind => _s('smallBlind');
   String get bigBlind => _s('bigBlind');
   String get yourBuyIn => _s('yourBuyIn');
@@ -163,6 +164,7 @@ class AppLocalizations {
       'newTableSubtitle':
           'Name and blinds are all the server keeps. Everything else is set when each player sits down.',
       'name': 'Name',
+      'generateTableName': 'Generate a random name',
       'smallBlind': 'Small blind',
       'bigBlind': 'Big blind',
       'yourBuyIn': 'Your buy-in',
@@ -257,6 +259,7 @@ class AppLocalizations {
       'newTableSubtitle':
           'Le serveur ne conserve que le nom et les blindes. Tout le reste est défini quand chaque joueur s\'installe.',
       'name': 'Nom',
+      'generateTableName': 'Générer un nom aléatoire',
       'smallBlind': 'Petite blinde',
       'bigBlind': 'Grosse blinde',
       'yourBuyIn': "Votre mise d'entrée",
