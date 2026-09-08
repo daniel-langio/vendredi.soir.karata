@@ -134,6 +134,18 @@ class AppLocalizations {
   String get you => _s('you');
   String get playing => _s('playing');
   String get spectating => _s('spectating');
+  String get gameVariant => _s('gameVariant');
+  String get variantTitle => _s('variantTitle');
+  String get variantName => _s('variantName');
+  String get variantHoleCards => _s('variantHoleCards');
+  String get variantBoard => _s('variantBoard');
+  String get variantBetting => _s('variantBetting');
+  String get variantRanking => _s('variantRanking');
+  String get variantSimplificationsHeading => _s('variantSimplificationsHeading');
+  String get variantNoSidePots => _s('variantNoSidePots');
+  String get variantNoButtonRotation => _s('variantNoButtonRotation');
+  String get variantSimplifiedMinRaise => _s('variantSimplifiedMinRaise');
+  String get close => _s('close');
 
   static const Map<String, Map<String, String>> _strings = {
     'en': {
@@ -233,6 +245,18 @@ class AppLocalizations {
       'you': 'You',
       'playing': 'Playing',
       'spectating': 'Spectating',
+      'gameVariant': 'Game variant',
+      'variantTitle': 'No-Limit Texas Hold\'em',
+      'variantName': 'No-Limit Texas Hold\'em',
+      'variantHoleCards': '2 hole cards per player, dealt face down',
+      'variantBoard': '5 shared community cards, revealed in three stages: flop (3), turn (1), river (1)',
+      'variantBetting': 'No-limit betting - you can raise up to your entire stack at any time',
+      'variantRanking': 'Best 5-card hand using any combination of your hole cards and the board',
+      'variantSimplificationsHeading': 'This table simplifies a few things',
+      'variantNoSidePots': 'No side pots - an all-in tie splits the whole pot evenly, regardless of stack size',
+      'variantNoButtonRotation': 'No dealer button rotation - the same two seats always post the blinds',
+      'variantSimplifiedMinRaise': 'Minimum raise is simplified (double the current bet), not the standard last-raise-size rule',
+      'close': 'Close',
     },
     'fr': {
       'cancel': 'Annuler',
@@ -331,6 +355,18 @@ class AppLocalizations {
       'you': 'Toi',
       'playing': 'En jeu',
       'spectating': 'Spectateur',
+      'gameVariant': 'Variante jouée',
+      'variantTitle': 'Texas Hold\'em sans limite',
+      'variantName': 'Texas Hold\'em sans limite',
+      'variantHoleCards': '2 cartes fermées par joueur, distribuées face cachée',
+      'variantBoard': '5 cartes communes partagées, révélées en trois temps : flop (3), turn (1), river (1)',
+      'variantBetting': 'Mises sans limite - vous pouvez relancer jusqu\'à tout votre tapis à tout moment',
+      'variantRanking': 'Meilleure main de 5 cartes parmi vos cartes et le tableau, dans n\'importe quelle combinaison',
+      'variantSimplificationsHeading': 'Cette table simplifie quelques règles',
+      'variantNoSidePots': 'Pas de pots secondaires - une égalité à tapis partage tout le pot également, peu importe la taille des tapis',
+      'variantNoButtonRotation': 'Pas de rotation du bouton donneur - les deux mêmes sièges misent toujours les blindes',
+      'variantSimplifiedMinRaise': 'Relance minimale simplifiée (le double de la mise actuelle), pas la règle standard de la taille de la dernière relance',
+      'close': 'Fermer',
     },
   };
 }

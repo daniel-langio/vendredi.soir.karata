@@ -245,6 +245,50 @@ class _TableScreenState extends State<TableScreen> {
     }
   }
 
+  void _showVariantInfo() {
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        final t = AppLocalizations.of(context);
+        Widget bullet(String text) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text('•  $text', style: const TextStyle(fontSize: 13, height: 1.4)),
+            );
+        return AlertDialog(
+          title: Text(t.variantTitle),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(t.variantName,
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                const SizedBox(height: 12),
+                bullet(t.variantHoleCards),
+                bullet(t.variantBoard),
+                bullet(t.variantBetting),
+                bullet(t.variantRanking),
+                const SizedBox(height: 8),
+                Text(t.variantSimplificationsHeading,
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                const SizedBox(height: 8),
+                bullet(t.variantNoSidePots),
+                bullet(t.variantNoButtonRotation),
+                bullet(t.variantSimplifiedMinRaise),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(t.close),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _toggleSizer(String type) {
     if (_selectedActionType == type) {
       setState(() => _selectedActionType = null);
@@ -281,6 +325,11 @@ class _TableScreenState extends State<TableScreen> {
         title: Text(_isClosed ? '$gameName (${t.closedSuffix})' : gameName,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: KarataColors.dim)),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline, size: 20),
+            tooltip: t.gameVariant,
+            onPressed: _showVariantInfo,
+          ),
           IconButton(
             icon: const Icon(Icons.ios_share, size: 20),
             tooltip: t.copyInvite,
