@@ -1,0 +1,57 @@
+name: Simulate Full Game
+
+# Drives a real, complete game through a live deployment of this API over plain HTTP - not
+# mocked, not against a local/test instance. Manually triggered since it writes real data
+# (creates a table, plays real hands) against whatever api_url you point it at.
+#
+# `variant` is currently informational only (this API only implements No-Limit Texas Hold'em) -
+# kept as an input now so adding a second variant later doesn't need a new trigger interface,
+# just a second script this workflow (or a sibling one) dispatches to.
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: 'Base poker API URL (no trailing slash)'
+        required: false
+        default: 'https://karata.onrender.com/poker'
+      variant:
+        description: 'Poker variant to simulate'
+        required: false
+        default: 'texas-holdem'
+        type: choice
+        options:
+          - texas-holdem
+      hands:
+        description: 'Number of hands to simulate'
+        required: false
+        default: '15'
+      small_blind:
+        description: 'Small blind'
+        required: false
+        default: '10'
+      big_blind:
+        description: 'Big blind'
+        required: false
+        default: '20'
+      buy_in:
+        description: 'Buy-in amount for each of the two players'
+        required: false
+        default: '2000'
+
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4.1.6
+
+      - name: Simulate Texas Hold'em
+        if: ${{ inputs.variant == 'texas-holdem' }}
+        env:
+          API_URL: ${{ inputs.api_url }}
+          HANDS: ${{ inputs.hands }}
+          SMALL_BLIND: ${{ inputs.small_blind }}
+          BIG_BLIND: ${{ inputs.big_blind }}
+          BUY_IN: ${{ inputs.buy_in }}
+        run: python3 .github/scripts/simulate_full_game.py
