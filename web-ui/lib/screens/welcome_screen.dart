@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../theme.dart';
 
-const kDefaultServerUrl = 'https://karata.onrender.com/poker';
+const kDefaultServerUrl =
+    'https://preprod-karata-490641885062.southamerica-east1.run.app/poker';
 
 /// When this app is served from the same Spring Boot app it talks to (the
 /// intended deployment for the web build - see web-ui/README.md), same-origin
