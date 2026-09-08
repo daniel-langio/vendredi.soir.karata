@@ -12,4 +12,6 @@ public interface ActionRepository extends JpaRepository<ActionEntity, UUID> {
   List<ActionEntity> findByDealIdOrderByActionOrderAsc(UUID dealId);
 
   Optional<ActionEntity> findTopByDealIdOrderByActionOrderDesc(UUID dealId);
+
+  Optional<ActionEntity> findTopByGameIdOrderByActionOrderDesc(UUID gameId);
 }

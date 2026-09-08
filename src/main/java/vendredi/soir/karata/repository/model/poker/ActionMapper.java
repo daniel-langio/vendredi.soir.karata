@@ -12,12 +12,13 @@ import vendredi.soir.karata.core.action.Action;
 public class ActionMapper {
   private final ObjectMapper objectMapper;
 
-  public ActionEntity toEntity(UUID gameId, UUID dealId, Action action) {
+  public ActionEntity toEntity(UUID gameId, UUID dealId, Action action, int actionOrder) {
     try {
       return ActionEntity.builder()
           .id(UUID.randomUUID())
           .gameId(gameId)
           .dealId(dealId)
+          .actionOrder(actionOrder)
           .type(action.getClass().getSimpleName())
           .payload(objectMapper.writeValueAsString(action))
           .timestamp(java.time.Instant.now())

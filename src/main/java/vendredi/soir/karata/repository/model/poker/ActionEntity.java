@@ -16,8 +16,13 @@ public class ActionEntity {
   private UUID gameId;
   private UUID dealId;
 
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  @Column(name = "action_order", insertable = false, updatable = false)
+  // Explicitly assigned by GameService.saveAction (see there for why) - NOT a DB-generated
+  // identity column, despite an earlier version of this class claiming it was one via
+  // @GeneratedValue(IDENTITY): the actual poker_action.action_order column was never created as
+  // a real identity/serial column, so with insertable=false (the old annotation) every row's
+  // action_order silently stayed NULL forever, and every replay of these actions across the
+  // whole app has never had a guaranteed-correct order until this was fixed.
+  @Column(name = "action_order", nullable = false)
   private Integer actionOrder;
 
   private String type;

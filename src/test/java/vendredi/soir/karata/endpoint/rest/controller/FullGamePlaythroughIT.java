@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,8 @@ import vendredi.soir.karata.endpoint.rest.model.Game;
 import vendredi.soir.karata.endpoint.rest.model.Hand;
 import vendredi.soir.karata.endpoint.rest.model.Phase;
 import vendredi.soir.karata.endpoint.rest.model.PlayerInfo;
+import vendredi.soir.karata.repository.model.poker.ActionEntity;
+import vendredi.soir.karata.repository.poker.ActionRepository;
 
 /**
  * Drives a complete heads-up hand through the real HTTP API (real controllers, services,
@@ -34,6 +37,7 @@ class FullGamePlaythroughIT extends FacadeIT {
 
   @Autowired private TestRestTemplate rest;
   @Autowired private ObjectMapper objectMapper;
+  @Autowired private ActionRepository actionRepository;
 
   @Test
   void plays_a_full_heads_up_hand_end_to_end() throws Exception {
@@ -129,6 +133,22 @@ class FullGamePlaythroughIT extends FacadeIT {
         HttpStatus.BAD_REQUEST,
         rejected.getStatusCode(),
         "no more actions should be accepted once the deal has reached showdown");
+
+    // The whole domain model is event-sourced: every action must replay in a strictly
+    // increasing, gap-free, per-game order or reconstructing Game/Deal state from history is
+    // unreliable. A prior bug (action_order declared as a DB-generated identity column that was
+    // never actually created as one) left this column NULL forever, which happened to still
+    // "work" against a fresh Testcontainers Postgres (small table, coincidental insertion-order
+    // scans) while silently corrupting replay order on the live deployment - assert on the
+    // field's actual values, not just on the end-to-end behavior working out this one time.
+    List<ActionEntity> persisted = actionRepository.findByGameIdOrderByActionOrderAsc(gameId);
+    assertFalse(persisted.isEmpty());
+    for (int i = 0; i < persisted.size(); i++) {
+      assertEquals(
+          i,
+          persisted.get(i).getActionOrder(),
+          "action_order must be exactly 0..n-1 with no gaps or nulls");
+    }
   }
 
   @Test

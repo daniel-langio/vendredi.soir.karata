@@ -85,9 +85,19 @@ public class GameService {
     return game;
   }
 
+  /**
+   * Every persisted action goes through here, in a strictly increasing per-game order - callers
+   * must already hold the per-game pessimistic lock (see lockGame) for the duration of their
+   * transaction, since this computes "next" by reading the current max, not via a DB sequence.
+   */
   @Transactional
   public void saveAction(UUID gid, UUID did, Action a) {
-    actionRepository.save(actionMapper.toEntity(gid, did, a));
+    int nextOrder =
+        actionRepository
+            .findTopByGameIdOrderByActionOrderDesc(gid)
+            .map(e -> e.getActionOrder() + 1)
+            .orElse(0);
+    actionRepository.save(actionMapper.toEntity(gid, did, a, nextOrder));
   }
 
   /**
