@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import vendredi.soir.karata.banking.BankingService;
 import vendredi.soir.karata.core.action.*;
 import vendredi.soir.karata.core.entity.*;
 import vendredi.soir.karata.core.rules.TexasHoldemRules;
@@ -21,6 +22,7 @@ public class GameService {
   private final PlayerRepository playerRepository;
   private final ActionRepository actionRepository;
   private final ActionMapper actionMapper;
+  private final BankingService bankingService;
 
   @Transactional
   public GameEntity createGame(String name, Long sb, Long bb, Long defaultBuyIn) {
@@ -47,6 +49,7 @@ public class GameService {
     if (Boolean.TRUE.equals(ge.getClosed())) {
       throw new ConflictException("Table is closed");
     }
+    bankingService.debit(user, chips);
     playerRepository.save(
         PlayerEntity.builder()
             .id(UUID.randomUUID())
@@ -102,7 +105,8 @@ public class GameService {
 
   /**
    * Ends a table for good: no further joins, deals, or actions are accepted afterwards. Anyone
-   * seated at the table can close it - there's no host/owner concept beyond that.
+   * seated at the table can close it - there's no host/owner concept beyond that. Every still-active
+   * player is cashed out for whatever they currently have, back into their persistent wallet.
    */
   @Transactional
   public void closeGame(UUID gid, String username) {
@@ -110,11 +114,23 @@ public class GameService {
     if (Boolean.TRUE.equals(ge.getClosed())) {
       throw new ConflictException("Table is already closed");
     }
-    boolean seated =
-        playerRepository.findByGameId(gid).stream().anyMatch(p -> p.getUsername().equals(username));
+    List<PlayerEntity> players = playerRepository.findByGameId(gid);
+    boolean seated = players.stream().anyMatch(p -> p.getUsername().equals(username));
     if (!seated) {
       throw new ForbiddenException("Only a seated player can close this table");
     }
+    Game g = getGame(gid);
+    players.stream()
+        .filter(p -> !Boolean.FALSE.equals(p.getActive()))
+        .forEach(
+            pe -> {
+              Player player =
+                  g.getPlayers().stream()
+                      .filter(p -> p.getName().equals(pe.getUsername()))
+                      .findFirst()
+                      .orElseThrow();
+              bankingService.credit(pe.getUsername(), g.getChips(player));
+            });
     ge.setClosed(true);
     gameRepository.save(ge);
   }

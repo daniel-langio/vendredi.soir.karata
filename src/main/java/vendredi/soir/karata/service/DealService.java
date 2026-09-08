@@ -6,6 +6,7 @@ import java.util.*;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import vendredi.soir.karata.banking.BankingService;
 import vendredi.soir.karata.core.action.*;
 import vendredi.soir.karata.core.entity.*;
 import vendredi.soir.karata.endpoint.rest.exception.*;
@@ -29,6 +30,7 @@ public class DealService {
   public static final int MISSED_TURNS_BEFORE_AUTO_LEAVE = 3;
 
   private final GameService gs;
+  private final BankingService bankingService;
 
   /**
    * The deadline for the player currently on the clock to act, derived from the timestamp of the
@@ -219,6 +221,7 @@ public class DealService {
     }
 
     gs.markPlayerLeft(gid, username);
+    bankingService.credit(username, g.getChips(player));
   }
 
   /**

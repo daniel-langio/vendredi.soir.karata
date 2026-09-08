@@ -5,6 +5,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import vendredi.soir.karata.banking.BankingService;
 import vendredi.soir.karata.endpoint.rest.exception.ConflictException;
 import vendredi.soir.karata.endpoint.rest.exception.UnauthorizedException;
 import vendredi.soir.karata.repository.model.poker.AccountEntity;
@@ -14,11 +15,14 @@ import vendredi.soir.karata.repository.poker.AccountRepository;
 public class AuthService {
   private final AccountRepository accountRepository;
   private final JwtService jwtService;
+  private final BankingService bankingService;
   private final PasswordEncoder passwordEncoder;
 
-  public AuthService(AccountRepository accountRepository, JwtService jwtService) {
+  public AuthService(
+      AccountRepository accountRepository, JwtService jwtService, BankingService bankingService) {
     this.accountRepository = accountRepository;
     this.jwtService = jwtService;
+    this.bankingService = bankingService;
     this.passwordEncoder = new BCryptPasswordEncoder();
   }
 
@@ -34,6 +38,7 @@ public class AuthService {
             .passwordHash(passwordEncoder.encode(password))
             .build();
     accountRepository.save(account);
+    bankingService.openWallet(username);
     return jwtService.generateToken(username);
   }
 

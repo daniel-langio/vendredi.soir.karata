@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import vendredi.soir.karata.banking.BankingService;
 import vendredi.soir.karata.core.entity.Game;
 import vendredi.soir.karata.endpoint.rest.model.ActionRequest;
 import vendredi.soir.karata.repository.model.poker.ActionEntity;
@@ -35,6 +36,7 @@ class PokerGameTest {
   @Mock private GameRepository gameRepository;
   @Mock private PlayerRepository playerRepository;
   @Mock private ActionRepository actionRepository;
+  @Mock private BankingService bankingService;
   private ActionMapper actionMapper;
 
   @BeforeEach
@@ -45,8 +47,10 @@ class PokerGameTest {
     om.registerModule(new ParameterNamesModule());
     om.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
     actionMapper = new ActionMapper(om);
-    gameService = new GameService(gameRepository, playerRepository, actionRepository, actionMapper);
-    dealService = new DealService(gameService);
+    gameService =
+        new GameService(
+            gameRepository, playerRepository, actionRepository, actionMapper, bankingService);
+    dealService = new DealService(gameService, bankingService);
   }
 
   @Test
