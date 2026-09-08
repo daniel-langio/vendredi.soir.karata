@@ -105,8 +105,9 @@ public class GameService {
 
   /**
    * Ends a table for good: no further joins, deals, or actions are accepted afterwards. Anyone
-   * seated at the table can close it - there's no host/owner concept beyond that. Every still-active
-   * player is cashed out for whatever they currently have, back into their persistent wallet.
+   * seated at the table can close it - there's no host/owner concept beyond that. Every
+   * still-active player is cashed out for whatever they currently have, back into their persistent
+   * wallet.
    */
   @Transactional
   public void closeGame(UUID gid, String username) {

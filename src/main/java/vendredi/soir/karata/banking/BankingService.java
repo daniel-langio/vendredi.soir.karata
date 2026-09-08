@@ -30,7 +30,9 @@ public class BankingService {
     return findWallet(username).getChips();
   }
 
-  /** Debits a table buy-in from the player's wallet - rejects the join if funds are insufficient. */
+  /**
+   * Debits a table buy-in from the player's wallet - rejects the join if funds are insufficient.
+   */
   @Transactional
   public void debit(String username, long amount) {
     Wallet wallet = findWalletForUpdate(username);
