@@ -26,7 +26,7 @@ jobs:
       - name: Check deadline
         id: deadline
         run: |
-          deadline="2026-09-09T14:00:00Z"  # 2026-09-09 17:00 UTC+3
+          deadline="2026-09-10T02:00:00Z"  # 2026-09-10 05:00 UTC+3
           now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           if [[ "$now" > "$deadline" ]]; then
             echo "Past deadline ($deadline UTC) - skipping this run."
