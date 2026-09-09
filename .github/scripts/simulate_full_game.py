@@ -153,17 +153,33 @@ def main():
     game_id = body["gameId"]
     log(f'Created game {game_id} ("{table_name}")')
 
+    # A repeated soak test playing the same two accounts against each other is only zero-sum in
+    # combined total, not per-account - whichever account loses more hands over time drifts below
+    # a fixed BUY_IN, and every run after that would fail with "Insufficient chips balance". Buy
+    # in for whatever's actually available instead of insisting on the configured amount.
+    buy_ins = {}
+    for username in (USERNAME_1, USERNAME_2):
+        status, wallet = http("GET", "/wallet", token=tokens[username])
+        if status != 200:
+            log(f"FATAL: could not fetch wallet for {username}: {status} {wallet}")
+            sys.exit(1)
+        buy_in = min(BUY_IN, wallet["chips"])
+        if buy_in <= 0:
+            log(f"{username}'s wallet is empty - nothing to buy in with, skipping this run.")
+            sys.exit(0)
+        buy_ins[username] = buy_in
+
     for username in (USERNAME_1, USERNAME_2):
         status, body = http(
             "POST",
             f"/games/{game_id}/players",
             token=tokens[username],
-            body={"buyInAmount": BUY_IN},
+            body={"buyInAmount": buy_ins[username]},
         )
         if status != 204:
             log(f"FATAL: {username} could not buy in: {status} {body}")
             sys.exit(1)
-        log(f"{username} bought in for {BUY_IN}")
+        log(f"{username} bought in for {buy_ins[username]}")
 
     action_counter = 0
     total_actions = 0
@@ -259,11 +275,11 @@ def main():
         log(f"  {p['username']}: {p['chips']}")
     log(f"Completed {hands_completed}/{HANDS} hands, {total_actions} total actions.")
 
-    # Cash both players back out to their persistent wallets - without this, repeated runs (e.g.
-    # a scheduled soak test) would each permanently lock BUY_IN*2 chips into an abandoned open
-    # table, eventually draining the shared test accounts' wallets until every future buy-in fails
-    # with "Insufficient chips balance". Not fatal on failure - a cashout hiccup shouldn't flip an
-    # otherwise-successful gameplay run to red.
+    # Cash both players back out to their persistent wallets - without this, repeated runs (e.g. a
+    # scheduled soak test) would each permanently lock chips into an abandoned open table, eventually
+    # draining the shared test accounts' wallets until every future buy-in fails with "Insufficient
+    # chips balance". Not fatal on failure - a cashout hiccup shouldn't flip an otherwise-successful
+    # gameplay run to red.
     status, resp = http("POST", f"/games/{game_id}/close", token=tokens[USERNAME_1])
     if status == 204:
         log(f"Closed table {game_id} - chips cashed back out to each player's wallet.")
