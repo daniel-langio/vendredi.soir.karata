@@ -62,6 +62,7 @@ class AppLocalizations {
   String get logOut => _s('logOut');
   String get language => _s('language');
   String get systemDefault => _s('systemDefault');
+  String get walletBalance => _s('walletBalance');
 
   // NewTableScreen
   String get newTableTitle => _s('newTableTitle');
@@ -175,6 +176,7 @@ class AppLocalizations {
       'logOut': 'Log out',
       'language': 'Language',
       'systemDefault': 'System default',
+      'walletBalance': 'Wallet balance',
       'newTableTitle': 'New table',
       'newTableSubtitle':
           'Name and blinds are all the server keeps. Everything else is set when each player sits down.',
@@ -285,6 +287,7 @@ class AppLocalizations {
       'logOut': 'Se déconnecter',
       'language': 'Langue',
       'systemDefault': 'Système',
+      'walletBalance': 'Solde du portefeuille',
       'newTableTitle': 'Nouvelle table',
       'newTableSubtitle':
           'Le serveur ne conserve que le nom et les blindes. Tout le reste est défini quand chaque joueur s\'installe.',

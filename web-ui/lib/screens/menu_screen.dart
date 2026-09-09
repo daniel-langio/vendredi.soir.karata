@@ -36,12 +36,24 @@ class MenuScreen extends StatefulWidget {
 class _MenuScreenState extends State<MenuScreen> {
   late final ApiClient _apiClient;
   List<RecentTable> _recent = [];
+  int? _walletChips;
 
   @override
   void initState() {
     super.initState();
     _apiClient = ApiClient(baseUrl: widget.serverUrl, token: widget.token);
     _loadRecent();
+    _loadWallet();
+  }
+
+  Future<void> _loadWallet() async {
+    try {
+      final chips = await _apiClient.getWallet();
+      if (!mounted) return;
+      setState(() => _walletChips = chips);
+    } catch (_) {
+      // Non-critical - the balance badge just stays hidden if we can't reach the server.
+    }
   }
 
   Future<void> _loadRecent() async {
@@ -84,19 +96,22 @@ class _MenuScreenState extends State<MenuScreen> {
       {'serverUrl': widget.serverUrl, 'token': widget.token, 'username': widget.username};
 
   void _openTable(String gameId) {
-    Navigator.of(context)
-        .pushNamed('/table/$gameId', arguments: _sessionArgs)
-        .then((_) => _loadRecent());
+    Navigator.of(context).pushNamed('/table/$gameId', arguments: _sessionArgs).then((_) {
+      _loadRecent();
+      _loadWallet();
+    });
   }
 
   Future<void> _createTable() async {
     await Navigator.of(context).pushNamed('/new-table', arguments: _sessionArgs);
     _loadRecent();
+    _loadWallet();
   }
 
   Future<void> _joinTable() async {
     await Navigator.of(context).pushNamed('/join-table', arguments: _sessionArgs);
     _loadRecent();
+    _loadWallet();
   }
 
   @override
@@ -132,18 +147,47 @@ class _MenuScreenState extends State<MenuScreen> {
                     child: Icon(Icons.person, color: KarataColors.ink),
                   ),
                   const SizedBox(width: 14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.username,
-                        style: const TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.w500, color: KarataColors.ink),
-                      ),
-                      Text(t.signInHint,
-                          style: const TextStyle(fontSize: 12.5, color: KarataColors.dim)),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.username,
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.w500, color: KarataColors.ink),
+                        ),
+                        Text(t.signInHint,
+                            style: const TextStyle(fontSize: 12.5, color: KarataColors.dim)),
+                      ],
+                    ),
                   ),
+                  if (_walletChips != null)
+                    Tooltip(
+                      message: t.walletBalance,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: KarataColors.chipBg,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.monetization_on_rounded,
+                                color: KarataColors.chipInk, size: 24),
+                            const SizedBox(width: 8),
+                            Text(
+                              '$_walletChips',
+                              style: const TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.bold,
+                                color: KarataColors.chipInk,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: 28),

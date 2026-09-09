@@ -174,6 +174,23 @@ class ApiClient {
     }
   }
 
+  /// GET /wallet
+  /// Fetch the caller's persistent chip wallet balance (separate from any single table's
+  /// in-progress stack).
+  Future<int> getWallet() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/wallet'),
+      headers: _headers,
+    );
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      return (body['chips'] as num).toInt();
+    } else {
+      _throwDetailedError(response);
+    }
+  }
+
   /// GET /deals/{dealId}/hand/me
   /// Fetch the calling player's private cards
   Future<Map<String, dynamic>> getMyHand(String dealId) async {
