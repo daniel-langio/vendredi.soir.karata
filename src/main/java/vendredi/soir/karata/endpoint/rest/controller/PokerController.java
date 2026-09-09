@@ -23,7 +23,8 @@ public class PokerController {
   private final RestMapper rm;
   private final JwtService jwtService;
 
-  private static final Set<String> VALID_VARIANTS = Set.of("TEXAS_HOLDEM", "OMAHA");
+  private static final Set<String> VALID_VARIANTS =
+      Set.of("TEXAS_HOLDEM", "OMAHA", "FIVE_CARD_DRAW");
 
   @PostMapping("/games")
   @ResponseStatus(HttpStatus.CREATED)
@@ -154,11 +155,24 @@ public class PokerController {
         && !type.equals("CALL")
         && !type.equals("FOLD")
         && !type.equals("RAISE")
-        && !type.equals("BET")) {
+        && !type.equals("BET")
+        && !type.equals("DRAW")) {
       throw new BadRequestException("Invalid action type: " + r.actionType());
     }
     if ((type.equals("RAISE") || type.equals("BET")) && (r.amount() == null || r.amount() <= 0)) {
       throw new BadRequestException("Amount is required and must be strictly positive for " + type);
+    }
+    if (type.equals("DRAW")) {
+      if (r.discard() == null) {
+        throw new BadRequestException(
+            "discard is required for DRAW - use an empty list to stand pat");
+      }
+      if (r.discard().size() > 5) {
+        throw new BadRequestException("Cannot discard more than 5 cards");
+      }
+      if (Set.copyOf(r.discard()).size() != r.discard().size()) {
+        throw new BadRequestException("discard contains duplicate cards");
+      }
     }
   }
 

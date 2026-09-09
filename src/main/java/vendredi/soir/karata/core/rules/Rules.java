@@ -32,4 +32,23 @@ public interface Rules {
   default int holeCardCount() {
     return 2;
   }
+
+  /**
+   * The current named phase of this deal (e.g. "PRE_FLOP", "SHOWDOWN") - each variant defines its
+   * own street sequence, so this replaces what used to be a single hardcoded Deal method.
+   */
+  String currentPhase(Deal deal, List<Player> dealtInPlayers);
+
+  /**
+   * Whether every player still needs to do in the current phase has been done - a betting round for
+   * Hold'em/Omaha, but e.g. "has everyone drawn yet" during Five-Card Draw's draw phase.
+   */
+  boolean isCurrentPhaseComplete(Deal deal, List<Player> dealtInPlayers);
+
+  /**
+   * What the Dealer should do once {@link #isCurrentPhaseComplete} is true (or everyone but one
+   * player has folded) to advance the deal - reveal board cards, insert a phase-boundary marker, or
+   * trigger a showdown.
+   */
+  Action nextPhaseAction(Game game, Deal deal, List<Player> dealtInPlayers, boolean foldedOut);
 }

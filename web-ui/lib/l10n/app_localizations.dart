@@ -115,6 +115,10 @@ class AppLocalizations {
   String yourTurnLeft(int secs) => _fmt('yourTurnLeft', {'secs': '$secs'});
   String waitingOn(String username) => _fmt('waitingOn', {'username': username});
   String get tableClosed => _s('tableClosed');
+  String get waitingForDraw => _s('waitingForDraw');
+  String get standPat => _s('standPat');
+  String drawCards(int count) => _fmt('drawCards', {'count': '$count'});
+  String get tapCardsToDiscard => _s('tapCardsToDiscard');
   String get startTheHand => _s('startTheHand');
   String get nextHand => _s('nextHand');
   String get fold => _s('fold');
@@ -147,6 +151,13 @@ class AppLocalizations {
   String get variantRankingOmaha => _s('variantRankingOmaha');
   String get variantTexasHoldemShort => _s('variantTexasHoldemShort');
   String get variantOmahaShort => _s('variantOmahaShort');
+  String get variantTitleFiveCardDraw => _s('variantTitleFiveCardDraw');
+  String get variantHoleCardsFiveCardDraw => _s('variantHoleCardsFiveCardDraw');
+  String get variantRankingFiveCardDraw => _s('variantRankingFiveCardDraw');
+  String get variantDrawPhase => _s('variantDrawPhase');
+  String get variantFiveCardDrawShort => _s('variantFiveCardDrawShort');
+  String get variantSevenCardStudShort => _s('variantSevenCardStudShort');
+  String get comingSoon => _s('comingSoon');
   String get variantSimplificationsHeading => _s('variantSimplificationsHeading');
   String get variantNoSidePots => _s('variantNoSidePots');
   String get variantNoButtonRotation => _s('variantNoButtonRotation');
@@ -232,6 +243,10 @@ class AppLocalizations {
       'yourTurnLeft': 'Your turn — {secs}s left',
       'waitingOn': 'Waiting on {username}',
       'tableClosed': 'THIS TABLE IS CLOSED',
+      'waitingForDraw': 'Waiting for the draw...',
+      'standPat': 'Stand pat',
+      'drawCards': 'Draw {count}',
+      'tapCardsToDiscard': 'Tap cards to discard, then draw',
       'startTheHand': 'Start the hand',
       'nextHand': 'Next hand',
       'fold': 'Fold',
@@ -265,6 +280,14 @@ class AppLocalizations {
           'Best 5-card hand using exactly 2 of your hole cards and exactly 3 from the board',
       'variantTexasHoldemShort': 'Texas Hold\'em',
       'variantOmahaShort': 'Omaha',
+      'variantTitleFiveCardDraw': 'No-Limit Five-Card Draw',
+      'variantHoleCardsFiveCardDraw': '5 hole cards per player, dealt face down',
+      'variantDrawPhase':
+          'No shared community cards - after the first betting round, each player may discard 0-5 cards and draw replacements, then a second betting round',
+      'variantRankingFiveCardDraw': 'Best 5-card hand using your own 5 cards',
+      'variantFiveCardDrawShort': 'Five-Card Draw',
+      'variantSevenCardStudShort': 'Seven-Card Stud',
+      'comingSoon': 'Soon',
       'variantSimplificationsHeading': 'This table simplifies a few things',
       'variantNoSidePots': 'No side pots - an all-in tie splits the whole pot evenly, regardless of stack size',
       'variantNoButtonRotation': 'No dealer button rotation - the same two seats always post the blinds',
@@ -349,6 +372,10 @@ class AppLocalizations {
       'yourTurnLeft': 'À vous de jouer — {secs} s restantes',
       'waitingOn': 'En attente de {username}',
       'tableClosed': 'CETTE TABLE EST FERMÉE',
+      'waitingForDraw': 'En attente de la pioche...',
+      'standPat': 'Garder sa main',
+      'drawCards': 'Piocher {count}',
+      'tapCardsToDiscard': 'Touchez les cartes à défausser, puis piochez',
       'startTheHand': 'Démarrer la main',
       'nextHand': 'Main suivante',
       'fold': 'Se coucher',
@@ -382,6 +409,14 @@ class AppLocalizations {
           'Meilleure main de 5 cartes en utilisant exactement 2 de vos cartes fermées et exactement 3 du tableau',
       'variantTexasHoldemShort': 'Texas Hold\'em',
       'variantOmahaShort': 'Omaha',
+      'variantTitleFiveCardDraw': 'Five-Card Draw sans limite',
+      'variantHoleCardsFiveCardDraw': '5 cartes fermées par joueur, distribuées face cachée',
+      'variantDrawPhase':
+          'Pas de cartes communes - après le premier tour de mises, chaque joueur peut défausser 0 à 5 cartes et en piocher autant, puis un second tour de mises',
+      'variantRankingFiveCardDraw': 'Meilleure main de 5 cartes parmi vos propres cartes',
+      'variantFiveCardDrawShort': 'Five-Card Draw',
+      'variantSevenCardStudShort': 'Seven-Card Stud',
+      'comingSoon': 'Bientôt',
       'variantSimplificationsHeading': 'Cette table simplifie quelques règles',
       'variantNoSidePots': 'Pas de pots secondaires - une égalité à tapis partage tout le pot également, peu importe la taille des tapis',
       'variantNoButtonRotation': 'Pas de rotation du bouton donneur - les deux mêmes sièges misent toujours les blindes',

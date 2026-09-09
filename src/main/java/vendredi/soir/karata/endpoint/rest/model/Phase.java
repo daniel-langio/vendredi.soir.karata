@@ -5,5 +5,8 @@ public enum Phase {
   FLOP,
   TURN,
   RIVER,
+  PRE_DRAW,
+  DRAW,
+  POST_DRAW,
   SHOWDOWN
 }

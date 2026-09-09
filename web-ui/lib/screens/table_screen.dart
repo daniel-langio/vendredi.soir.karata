@@ -38,6 +38,9 @@ class _TableScreenState extends State<TableScreen> {
   String? _selectedActionType; // 'BET' or 'RAISE' while the sizer is open
   int _sizerAmount = 0;
 
+  // Five-Card Draw: indices into _myCards the player has tapped to mark for discard.
+  final Set<int> _selectedDiscardIndices = {};
+
   // Purely cosmetic bookkeeping for the turn countdown's progress bar - the deadline itself
   // (_turnDeadline) is always the server's authoritative value; this just remembers when we
   // first observed the current turn so the bar has a start point to animate from.
@@ -119,7 +122,10 @@ class _TableScreenState extends State<TableScreen> {
   }
 
   Future<void> _startHand() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _selectedDiscardIndices.clear();
+    });
     try {
       final game = await _apiClient.startDeal(widget.gameId);
       if (mounted) setState(() => _game = game);
@@ -140,6 +146,31 @@ class _TableScreenState extends State<TableScreen> {
       await _refresh();
     } catch (e) {
       _showError((t) => t.actionFailed(actionType, '$e'));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _toggleDiscard(int index) {
+    setState(() {
+      if (_selectedDiscardIndices.contains(index)) {
+        _selectedDiscardIndices.remove(index);
+      } else {
+        _selectedDiscardIndices.add(index);
+      }
+    });
+  }
+
+  Future<void> _submitDraw() async {
+    if (_dealId.isEmpty) return;
+    final discard = _selectedDiscardIndices.map((i) => _myCards[i].toString()).toList();
+    setState(() => _isLoading = true);
+    try {
+      await _apiClient.takeAction(dealId: _dealId, actionType: 'DRAW', discard: discard);
+      setState(() => _selectedDiscardIndices.clear());
+      await _refresh();
+    } catch (e) {
+      _showError((t) => t.actionFailed('DRAW', '$e'));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -246,14 +277,27 @@ class _TableScreenState extends State<TableScreen> {
   }
 
   void _showVariantInfo() {
-    final isOmaha = _game?['variant'] == 'OMAHA';
+    final variant = _game?['variant'] as String? ?? 'TEXAS_HOLDEM';
     showDialog<void>(
       context: context,
       builder: (context) {
         final t = AppLocalizations.of(context);
-        final title = isOmaha ? t.variantTitleOmaha : t.variantTitle;
-        final holeCardsText = isOmaha ? t.variantHoleCardsOmaha : t.variantHoleCards;
-        final rankingText = isOmaha ? t.variantRankingOmaha : t.variantRanking;
+        final title = switch (variant) {
+          'OMAHA' => t.variantTitleOmaha,
+          'FIVE_CARD_DRAW' => t.variantTitleFiveCardDraw,
+          _ => t.variantTitle,
+        };
+        final holeCardsText = switch (variant) {
+          'OMAHA' => t.variantHoleCardsOmaha,
+          'FIVE_CARD_DRAW' => t.variantHoleCardsFiveCardDraw,
+          _ => t.variantHoleCards,
+        };
+        final boardText = variant == 'FIVE_CARD_DRAW' ? t.variantDrawPhase : t.variantBoard;
+        final rankingText = switch (variant) {
+          'OMAHA' => t.variantRankingOmaha,
+          'FIVE_CARD_DRAW' => t.variantRankingFiveCardDraw,
+          _ => t.variantRanking,
+        };
         Widget bullet(String text) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Text('•  $text', style: const TextStyle(fontSize: 13, height: 1.4)),
@@ -268,7 +312,7 @@ class _TableScreenState extends State<TableScreen> {
                 Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                 const SizedBox(height: 12),
                 bullet(holeCardsText),
-                bullet(t.variantBoard),
+                bullet(boardText),
                 bullet(t.variantBetting),
                 bullet(rankingText),
                 const SizedBox(height: 8),
@@ -422,6 +466,11 @@ class _TableScreenState extends State<TableScreen> {
                 const SizedBox(height: 14),
                 _buildSelfStatus(),
                 const SizedBox(height: 8),
+                if (_phase == 'DRAW' && _isMyTurn) ...[
+                  Text(t.tapCardsToDiscard,
+                      style: const TextStyle(fontSize: 12, color: KarataColors.dim)),
+                  const SizedBox(height: 6),
+                ],
                 _buildHandRow(),
               ],
             ),
@@ -512,6 +561,28 @@ class _TableScreenState extends State<TableScreen> {
         child: ElevatedButton(
           onPressed: _isPlaying ? _startHand : null,
           child: Text(_isPlaying ? t.nextHand : t.spectating),
+        ),
+      );
+    }
+
+    if (_phase == 'DRAW') {
+      if (!_isMyTurn) {
+        return SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: Center(
+            child: Text(t.waitingForDraw,
+                style: const TextStyle(color: KarataColors.dim, fontSize: 13)),
+          ),
+        );
+      }
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: _submitDraw,
+          child: Text(_selectedDiscardIndices.isEmpty
+              ? t.standPat
+              : t.drawCards(_selectedDiscardIndices.length)),
         ),
       );
     }
@@ -693,6 +764,7 @@ class _TableScreenState extends State<TableScreen> {
   }
 
   Widget _buildHandRow() {
+    final canSelectDiscards = _phase == 'DRAW' && _isMyTurn;
     return SizedBox(
       height: 132,
       child: Row(
@@ -706,12 +778,21 @@ class _TableScreenState extends State<TableScreen> {
                       for (var i = 0; i < _myCards.length; i++)
                         Positioned(
                           left: i * 76.0,
-                          child: PokerCardWidget(
-                            cardCode: _myCards[i]?.toString(),
-                            width: 92,
-                            height: 124,
-                            rankFontSize: 34,
-                            suitFontSize: 26,
+                          child: GestureDetector(
+                            onTap: canSelectDiscards ? () => _toggleDiscard(i) : null,
+                            child: Opacity(
+                              opacity:
+                                  canSelectDiscards && _selectedDiscardIndices.contains(i)
+                                      ? 0.35
+                                      : 1.0,
+                              child: PokerCardWidget(
+                                cardCode: _myCards[i]?.toString(),
+                                width: 92,
+                                height: 124,
+                                rankFontSize: 34,
+                                suitFontSize: 26,
+                              ),
+                            ),
                           ),
                         ),
                     ],

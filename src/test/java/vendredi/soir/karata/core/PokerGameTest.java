@@ -99,8 +99,8 @@ class PokerGameTest {
 
       // startDeal now auto-posts blinds (Alice=SB 10, Bob=BB 20), so Alice must call the
       // extra 10 to match the big blind before betting can close.
-      dealService.takeAction(dealId, new ActionRequest("CALL", 10L));
-      dealService.takeAction(dealId, new ActionRequest("CHECK", 0L));
+      dealService.takeAction(dealId, new ActionRequest("CALL", 10L, null));
+      dealService.takeAction(dealId, new ActionRequest("CHECK", 0L, null));
 
       assertNotNull(game.getCurrentDeal());
     }

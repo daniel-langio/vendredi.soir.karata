@@ -127,6 +127,13 @@ class _NewTableScreenState extends State<NewTableScreen> {
                 ButtonSegment(
                     value: 'TEXAS_HOLDEM', label: Text(t.variantTexasHoldemShort)),
                 ButtonSegment(value: 'OMAHA', label: Text(t.variantOmahaShort)),
+                ButtonSegment(
+                    value: 'FIVE_CARD_DRAW', label: Text(t.variantFiveCardDrawShort)),
+                ButtonSegment(
+                  value: 'SEVEN_CARD_STUD',
+                  label: Text('${t.variantSevenCardStudShort} (${t.comingSoon})'),
+                  enabled: false,
+                ),
               ],
               selected: {_variant},
               onSelectionChanged: (selection) =>

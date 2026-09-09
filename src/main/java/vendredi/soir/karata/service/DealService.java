@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vendredi.soir.karata.banking.BankingService;
 import vendredi.soir.karata.core.action.*;
 import vendredi.soir.karata.core.entity.*;
+import vendredi.soir.karata.core.rules.Rules;
 import vendredi.soir.karata.endpoint.rest.exception.*;
 import vendredi.soir.karata.endpoint.rest.model.ActionRequest;
 import vendredi.soir.karata.repository.model.poker.GameEntity;
@@ -130,6 +131,12 @@ public class DealService {
           case "FOLD" -> new Fold(player);
           case "RAISE" -> new Raise(player, amt);
           case "BET" -> new Bet(player, amt);
+          case "DRAW" ->
+              new Draw(
+                  player,
+                  req.discard() == null
+                      ? List.of()
+                      : req.discard().stream().map(Card::fromCode).toList());
           default -> throw new BadRequestException("Unknown action type: " + req.actionType());
         };
 
@@ -137,6 +144,16 @@ public class DealService {
       saveAll(gid, did, g.getDealer().execute(g, d, a));
     } catch (IllegalArgumentException e) {
       throw new BadRequestException("Illegal move: " + e.getMessage());
+    }
+
+    // Five-Card Draw: replace whatever was just discarded, one card at a time, straight from the
+    // deck - same mechanism (DealHoleCard) as the initial deal, so Deal.nextCards' deck-offset
+    // bookkeeping doesn't need to know anything special happened.
+    if (a instanceof Draw draw) {
+      for (int i = 0; i < draw.getDiscarded().size(); i++) {
+        saveAll(
+            gid, did, g.getDealer().execute(g, d, new DealHoleCard(player, d.nextCards(1).get(0))));
+      }
     }
 
     gs.resetMissedTurns(gid, username);
@@ -212,7 +229,7 @@ public class DealService {
     // they never played.
     if (d != null
         && !d.getHoleCards(player).isEmpty()
-        && !"SHOWDOWN".equals(d.getCurrentPhase())
+        && !"SHOWDOWN".equals(g.getRules().currentPhase(d, d.filterDealtIn(g.getPlayers())))
         && !d.hasFolded(player)
         && !d.isAllIn(player, g)) {
       UUID did = g.getCurrentDealId();
@@ -229,30 +246,19 @@ public class DealService {
    * is complete, or immediately awards the pot if every other player has folded.
    */
   private void progressDealIfNeeded(Game g, Deal d, UUID gid, UUID did) {
-    if ("SHOWDOWN".equals(d.getCurrentPhase())) {
+    Rules rules = g.getRules();
+    List<Player> dealtIn = d.filterDealtIn(g.getPlayers());
+    if ("SHOWDOWN".equals(rules.currentPhase(d, dealtIn))) {
       return;
     }
 
-    List<Player> dealtIn = d.filterDealtIn(g.getPlayers());
     List<Player> active = dealtIn.stream().filter(p -> !d.hasFolded(p)).toList();
     boolean foldedOut = active.size() <= 1;
-    if (!foldedOut && !g.getRules().isBettingRoundComplete(d, dealtIn)) {
+    if (!foldedOut && !rules.isCurrentPhaseComplete(d, dealtIn)) {
       return;
     }
 
-    Action next;
-    if (foldedOut) {
-      next = new Showdown();
-    } else {
-      next =
-          switch (d.getCurrentPhase()) {
-            case "PRE_FLOP" -> new RevealCards(d.nextCards(3));
-            case "FLOP" -> new RevealCards(d.nextCards(1));
-            case "TURN" -> new RevealCards(d.nextCards(1));
-            default -> new Showdown(); // RIVER betting closed
-          };
-    }
-
+    Action next = rules.nextPhaseAction(g, d, dealtIn, foldedOut);
     saveAll(gid, did, g.getDealer().execute(g, d, next));
   }
 

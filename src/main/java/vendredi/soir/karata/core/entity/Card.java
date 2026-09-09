@@ -60,6 +60,26 @@ public record Card(Suit suit, Rank rank) {
   public static final Card SPADE_KING = new Card(SPADES, KING);
   public static final Card SPADE_ACE = new Card(SPADES, ACE);
 
+  /**
+   * Parses the exact format {@link #toString()} produces (rank label + suit label, e.g. "9D",
+   * "10C", "AS") - used to accept a discard list of card codes over REST for the draw variants.
+   */
+  public static Card fromCode(String code) {
+    String suitLabel = code.substring(code.length() - 1);
+    String rankLabel = code.substring(0, code.length() - 1);
+    Suit suit =
+        java.util.Arrays.stream(Suit.values())
+            .filter(s -> s.getLabel().equals(suitLabel))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("Unknown suit in card code: " + code));
+    Rank rank =
+        java.util.Arrays.stream(Rank.values())
+            .filter(r -> r.getLabel().equals(rankLabel))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("Unknown rank in card code: " + code));
+    return new Card(suit, rank);
+  }
+
   @Override
   public String toString() {
     return rank + "" + suit;

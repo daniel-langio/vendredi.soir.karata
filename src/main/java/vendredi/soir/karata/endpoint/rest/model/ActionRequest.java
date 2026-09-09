@@ -1,3 +1,5 @@
 package vendredi.soir.karata.endpoint.rest.model;
 
-public record ActionRequest(String actionType, Long amount) {}
+import java.util.List;
+
+public record ActionRequest(String actionType, Long amount, List<String> discard) {}

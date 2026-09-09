@@ -126,10 +126,14 @@ class ApiClient {
     required String dealId,
     required String actionType,
     int? amount,
+    List<String>? discard,
   }) async {
     final bodyMap = <String, dynamic>{'actionType': actionType};
     if (amount != null) {
       bodyMap['amount'] = amount;
+    }
+    if (discard != null) {
+      bodyMap['discard'] = discard;
     }
 
     final response = await http.post(

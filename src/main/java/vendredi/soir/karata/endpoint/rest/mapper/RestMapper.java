@@ -50,13 +50,13 @@ public class RestMapper {
     List<String> communityCards = new ArrayList<>(5);
     for (int i = 0; i < 5; i++)
       communityCards.add(i < deal.getBoard().size() ? deal.getBoard().get(i).toString() : null);
-    Player activePlayer =
-        game.getRules().determineNextPlayer(deal, deal.filterDealtIn(game.getPlayers()));
+    List<Player> dealtIn = deal.filterDealtIn(game.getPlayers());
+    Player activePlayer = game.getRules().determineNextPlayer(deal, dealtIn);
     return new DealState(
         dealId,
         communityCards,
         deal.getTotalPot(),
-        Phase.valueOf(deal.getCurrentPhase()),
+        Phase.valueOf(game.getRules().currentPhase(deal, dealtIn)),
         activePlayer != null ? UUID.nameUUIDFromBytes(activePlayer.getName().getBytes()) : null,
         deal.getCurrentRoundBet(),
         outcome(deal, game),
@@ -71,7 +71,10 @@ public class RestMapper {
       Set<String> activeUsernames) {
     UUID currentDealId = game.getCurrentDealId();
     Deal deal = game.getCurrentDeal();
-    boolean handInProgress = deal != null && !"SHOWDOWN".equals(deal.getCurrentPhase());
+    boolean handInProgress =
+        deal != null
+            && !"SHOWDOWN"
+                .equals(game.getRules().currentPhase(deal, deal.filterDealtIn(game.getPlayers())));
 
     List<PlayerInfo> players =
         game.getPlayers().stream()

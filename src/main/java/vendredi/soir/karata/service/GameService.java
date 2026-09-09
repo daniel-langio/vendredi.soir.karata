@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import vendredi.soir.karata.banking.BankingService;
 import vendredi.soir.karata.core.action.*;
 import vendredi.soir.karata.core.entity.*;
+import vendredi.soir.karata.core.rules.FiveCardDrawRules;
 import vendredi.soir.karata.core.rules.OmahaRules;
 import vendredi.soir.karata.core.rules.Rules;
 import vendredi.soir.karata.core.rules.TexasHoldemRules;
@@ -42,7 +43,9 @@ public class GameService {
   }
 
   private static Rules rulesFor(String variant) {
-    return "OMAHA".equals(variant) ? new OmahaRules() : new TexasHoldemRules();
+    if ("OMAHA".equals(variant)) return new OmahaRules();
+    if ("FIVE_CARD_DRAW".equals(variant)) return new FiveCardDrawRules();
+    return new TexasHoldemRules();
   }
 
   @Transactional

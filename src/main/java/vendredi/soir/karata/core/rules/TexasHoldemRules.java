@@ -2,6 +2,7 @@ package vendredi.soir.karata.core.rules;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -19,6 +20,28 @@ public class TexasHoldemRules implements Rules {
   @Override
   public boolean isActionLegal(Game game, Deal deal, Action action) {
     if (action instanceof PlayerAction pa) {
+      // Folding must stay legal in every phase regardless of variant - enforceTurnTimeout relies
+      // on always being able to bail an AFK player out, including mid-draw.
+      if (pa instanceof Fold) {
+        return true;
+      }
+      String phase = currentPhase(deal, deal.filterDealtIn(game.getPlayers()));
+      if (pa instanceof Draw draw) {
+        if (!"DRAW".equals(phase)) return false;
+        List<Card> hand = deal.getHoleCards(draw.getPlayer());
+        boolean allOwned = hand.containsAll(draw.getDiscarded());
+        boolean notTooMany = draw.getDiscarded().size() <= hand.size();
+        boolean noDuplicates =
+            new HashSet<>(draw.getDiscarded()).size() == draw.getDiscarded().size();
+        boolean alreadyDrew =
+            deal.getHistory().stream()
+                .anyMatch(a -> a instanceof Draw d && d.getPlayer().equals(draw.getPlayer()));
+        return allOwned && notTooMany && noDuplicates && !alreadyDrew;
+      }
+      // No betting-style action is legal during a draw phase (nothing to bet on yet this round).
+      if ("DRAW".equals(phase)) {
+        return false;
+      }
       if (pa instanceof Bet bet) {
         return game.getChips(bet.getPlayer()) >= bet.getAmount() && deal.getCurrentRoundBet() == 0;
       }
@@ -125,5 +148,32 @@ public class TexasHoldemRules implements Rules {
       if (deal.getPlayerRoundContribution(p) != roundBet) return false;
     }
     return true;
+  }
+
+  @Override
+  public String currentPhase(Deal deal, List<Player> dealtInPlayers) {
+    if (deal.getHistory().stream().anyMatch(a -> a instanceof Showdown)) return "SHOWDOWN";
+    long revealCount = deal.getHistory().stream().filter(a -> a instanceof RevealCards).count();
+    if (revealCount == 0) return "PRE_FLOP";
+    if (revealCount == 1) return "FLOP";
+    if (revealCount == 2) return "TURN";
+    return "RIVER";
+  }
+
+  @Override
+  public boolean isCurrentPhaseComplete(Deal deal, List<Player> dealtInPlayers) {
+    return isBettingRoundComplete(deal, dealtInPlayers);
+  }
+
+  @Override
+  public Action nextPhaseAction(
+      Game game, Deal deal, List<Player> dealtInPlayers, boolean foldedOut) {
+    if (foldedOut) return new Showdown();
+    return switch (currentPhase(deal, dealtInPlayers)) {
+      case "PRE_FLOP" -> new RevealCards(deal.nextCards(3));
+      case "FLOP" -> new RevealCards(deal.nextCards(1));
+      case "TURN" -> new RevealCards(deal.nextCards(1));
+      default -> new Showdown(); // RIVER betting closed
+    };
   }
 }

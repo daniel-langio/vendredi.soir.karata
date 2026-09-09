@@ -23,10 +23,17 @@ public class Deal {
 
   // Projections
   public List<Card> getHoleCards(Player player) {
-    return history.stream()
-        .filter(a -> a instanceof DealHoleCard dhc && dhc.getPlayer().equals(player))
-        .map(a -> ((DealHoleCard) a).getCard())
-        .collect(Collectors.toList());
+    List<Card> dealt =
+        history.stream()
+            .filter(a -> a instanceof DealHoleCard dhc && dhc.getPlayer().equals(player))
+            .map(a -> ((DealHoleCard) a).getCard())
+            .collect(Collectors.toCollection(ArrayList::new));
+    // Five-Card Draw: a discarded card is removed from the pool of cards actually held, so only
+    // the replacement dealt right after it (see DealService.takeAction) remains in that slot.
+    history.stream()
+        .filter(a -> a instanceof Draw draw && draw.getPlayer().equals(player))
+        .forEach(a -> ((Draw) a).getDiscarded().forEach(dealt::remove));
+    return dealt;
   }
 
   public boolean hasFolded(Player player) {
@@ -125,15 +132,6 @@ public class Deal {
     return null;
   }
 
-  public String getCurrentPhase() {
-    if (history.stream().anyMatch(a -> a instanceof Showdown)) return "SHOWDOWN";
-    long revealCount = history.stream().filter(a -> a instanceof RevealCards).count();
-    if (revealCount == 0) return "PRE_FLOP";
-    if (revealCount == 1) return "FLOP";
-    if (revealCount == 2) return "TURN";
-    return "RIVER";
-  }
-
   public int getHoleCardsDealtCount() {
     return (int) history.stream().filter(a -> a instanceof DealHoleCard).count();
   }
@@ -151,15 +149,19 @@ public class Deal {
     return new ArrayList<>(order.subList(consumed, consumed + count));
   }
 
+  /**
+   * Actions since the last phase boundary - a RevealCards (board-based variants) or AdvancePhase
+   * (variants with no shared board, e.g. Five-Card Draw's pre-draw/draw/post-draw transitions).
+   */
   public List<Action> getActionsInCurrentPhase() {
-    int lastRevealIndex = -1;
+    int lastBoundaryIndex = -1;
     for (int i = history.size() - 1; i >= 0; i--) {
-      if (history.get(i) instanceof RevealCards) {
-        lastRevealIndex = i;
+      if (history.get(i) instanceof RevealCards || history.get(i) instanceof AdvancePhase) {
+        lastBoundaryIndex = i;
         break;
       }
     }
-    return history.subList(lastRevealIndex + 1, history.size());
+    return history.subList(lastBoundaryIndex + 1, history.size());
   }
 
   public long getTotalPot() {
