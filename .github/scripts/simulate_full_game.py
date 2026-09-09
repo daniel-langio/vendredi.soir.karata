@@ -259,6 +259,17 @@ def main():
         log(f"  {p['username']}: {p['chips']}")
     log(f"Completed {hands_completed}/{HANDS} hands, {total_actions} total actions.")
 
+    # Cash both players back out to their persistent wallets - without this, repeated runs (e.g.
+    # a scheduled soak test) would each permanently lock BUY_IN*2 chips into an abandoned open
+    # table, eventually draining the shared test accounts' wallets until every future buy-in fails
+    # with "Insufficient chips balance". Not fatal on failure - a cashout hiccup shouldn't flip an
+    # otherwise-successful gameplay run to red.
+    status, resp = http("POST", f"/games/{game_id}/close", token=tokens[USERNAME_1])
+    if status == 204:
+        log(f"Closed table {game_id} - chips cashed back out to each player's wallet.")
+    else:
+        log(f"WARNING: could not close table {game_id} after simulation: {status} {resp}")
+
     if hands_completed == 0:
         log("FATAL: no hands completed at all.")
         sys.exit(1)

@@ -1,0 +1,49 @@
+name: Scheduled Simulate (temporary soak test)
+
+# Time-boxed soak test: runs a 50-hand simulation against the live karata0 deployment every 5
+# minutes (GitHub Actions' minimum schedule interval). Each run checks the deadline below first
+# and no-ops past it - cheap, but the cron trigger itself keeps firing forever until this file's
+# `schedule:` block (or the whole file) is removed/disabled, since GitHub has no built-in way to
+# expire a schedule automatically.
+#
+# `concurrency` (queue, don't cancel) avoids two runs fighting over the same two shared test
+# users' wallets if a run ever takes longer than 5 minutes.
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: scheduled-simulate
+  cancel-in-progress: false
+
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check deadline
+        id: deadline
+        run: |
+          deadline="2026-09-09T14:00:00Z"  # 2026-09-09 17:00 UTC+3
+          now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          if [[ "$now" > "$deadline" ]]; then
+            echo "Past deadline ($deadline UTC) - skipping this run."
+            echo "expired=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "expired=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4.1.6
+        if: steps.deadline.outputs.expired == 'false'
+
+      - name: Simulate 50-hand game
+        if: steps.deadline.outputs.expired == 'false'
+        env:
+          API_URL: https://preprod-karata-210977503792.southamerica-east1.run.app/poker
+          HANDS: '50'
+          SMALL_BLIND: '10'
+          BIG_BLIND: '20'
+          BUY_IN: '500'
+        run: python3 .github/scripts/simulate_full_game.py
