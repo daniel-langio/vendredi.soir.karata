@@ -1,17 +1,20 @@
 name: Scheduled Simulate (temporary soak test)
 
-# Time-boxed soak test: runs a 50-hand simulation against the live karata0 deployment every 5
-# minutes (GitHub Actions' minimum schedule interval). Each run checks the deadline below first
-# and no-ops past it - cheap, but the cron trigger itself keeps firing forever until this file's
-# `schedule:` block (or the whole file) is removed/disabled, since GitHub has no built-in way to
-# expire a schedule automatically.
+# Time-boxed soak test: runs a 50-hand simulation against the live karata0 deployment every 30
+# minutes. Started at every 5 minutes (GitHub Actions' minimum schedule interval), but that fired
+# only once automatically in ~7.5 hours - very frequent schedules are best-effort on GitHub's side
+# and can be silently dropped for long stretches under platform load, with nothing actionable on
+# this end to fix it; 30 minutes is far more reliably honored in practice. Each run checks the
+# deadline below first and no-ops past it - cheap, but the cron trigger itself keeps firing forever
+# until this file's `schedule:` block (or the whole file) is removed/disabled, since GitHub has no
+# built-in way to expire a schedule automatically.
 #
 # `concurrency` (queue, don't cancel) avoids two runs fighting over the same two shared test
-# users' wallets if a run ever takes longer than 5 minutes.
+# users' wallets if a run ever takes longer than the interval.
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/30 * * * *'
   workflow_dispatch: {}
 
 concurrency:
