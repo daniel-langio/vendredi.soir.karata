@@ -18,4 +18,5 @@ public class GameEntity {
   private Long defaultBuyIn;
 
   @Builder.Default private Boolean closed = false;
+  @Builder.Default private String variant = "TEXAS_HOLDEM";
 }

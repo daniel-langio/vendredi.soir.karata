@@ -71,6 +71,32 @@ public class HandFactory {
     return bestHand;
   }
 
+  /**
+   * Omaha's "exactly 2 from your hole cards, exactly 3 from the board" rule - unlike Hold'em,
+   * having 4 hole cards does NOT mean any combination of hole+board cards is eligible (a common
+   * beginner mistake: 4 suited hole cards is not a flush unless exactly 2 of them plus exactly 3
+   * suited board cards make one).
+   */
+  public static Hand evaluateBestOmahaHand(List<Card> holeCards, List<Card> board) {
+    List<List<Card>> holeCombos = new ArrayList<>();
+    generateCombinations(holeCards, 2, 0, new ArrayList<>(), holeCombos);
+    List<List<Card>> boardCombos = new ArrayList<>();
+    generateCombinations(board, 3, 0, new ArrayList<>(), boardCombos);
+
+    Hand bestHand = null;
+    for (List<Card> hole : holeCombos) {
+      for (List<Card> boardPick : boardCombos) {
+        List<Card> five = new ArrayList<>(hole);
+        five.addAll(boardPick);
+        Hand currentHand = from(new Deck(five));
+        if (bestHand == null || currentHand.compareTo(bestHand) > 0) {
+          bestHand = currentHand;
+        }
+      }
+    }
+    return bestHand;
+  }
+
   private static void generateCombinations(
       List<Card> cards, int k, int start, List<Card> current, List<List<Card>> result) {
     if (current.size() == k) {

@@ -9,7 +9,6 @@ import vendredi.soir.karata.core.entity.Card;
 import vendredi.soir.karata.core.entity.Deal;
 import vendredi.soir.karata.core.entity.Hand;
 import vendredi.soir.karata.core.entity.Player;
-import vendredi.soir.karata.core.factory.HandFactory;
 import vendredi.soir.karata.endpoint.rest.model.*;
 import vendredi.soir.karata.repository.model.poker.GameEntity;
 
@@ -98,7 +97,8 @@ public class RestMapper {
         toRest(deal, currentDealId, game, turnDeadline),
         you(game, requestingUsername),
         entity.getClosed(),
-        entity.getDefaultBuyIn());
+        entity.getDefaultBuyIn(),
+        entity.getVariant());
   }
 
   private YouState you(vendredi.soir.karata.core.entity.Game game, String requestingUsername) {
@@ -133,43 +133,41 @@ public class RestMapper {
     boolean realShowdown =
         deal.filterDealtIn(game.getPlayers()).stream().filter(p -> !deal.hasFolded(p)).count() > 1;
 
+    // Always go through Rules rather than combining hole+board cards directly here - Hold'em
+    // treats all 7 cards as one pool ("best 5 of 7"), but Omaha requires exactly 2 hole + 3 board,
+    // so a variant-blind HandFactory.evaluateBestHand call would describe the wrong hand there.
+    Map<Player, Hand> showdownHands =
+        realShowdown
+            ? game.getRules().evaluateShowdownHands(deal, deal.filterDealtIn(game.getPlayers()))
+            : Map.of();
+
     List<WinnerInfo> winners =
         awards.stream()
             .map(
                 ap -> {
                   Player winner = ap.getWinner();
-                  String handRank = null;
-                  if (realShowdown) {
-                    List<Card> allCards = new ArrayList<>(deal.getHoleCards(winner));
-                    allCards.addAll(deal.getBoard());
-                    handRank = HandFactory.evaluateBestHand(allCards).describe();
-                  }
+                  Hand hand = showdownHands.get(winner);
                   return new WinnerInfo(
                       UUID.nameUUIDFromBytes(winner.getName().getBytes()),
                       winner.getName(),
                       ap.getAmount(),
-                      handRank);
+                      hand != null ? hand.describe() : null);
                 })
             .toList();
 
-    List<RevealedHand> revealedHands = List.of();
-    if (realShowdown) {
-      Map<Player, Hand> showdownHands =
-          game.getRules().evaluateShowdownHands(deal, deal.filterDealtIn(game.getPlayers()));
-      // Stable, deterministic order (the map itself has none) - same order the players are
-      // listed in everywhere else on this game.
-      revealedHands =
-          game.getPlayers().stream()
-              .filter(showdownHands::containsKey)
-              .map(
-                  p ->
-                      new RevealedHand(
-                          UUID.nameUUIDFromBytes(p.getName().getBytes()),
-                          p.getName(),
-                          deal.getHoleCards(p).stream().map(Card::toString).toList(),
-                          showdownHands.get(p).describe()))
-              .toList();
-    }
+    // Stable, deterministic order (the map itself has none) - same order the players are listed
+    // in everywhere else on this game.
+    List<RevealedHand> revealedHands =
+        game.getPlayers().stream()
+            .filter(showdownHands::containsKey)
+            .map(
+                p ->
+                    new RevealedHand(
+                        UUID.nameUUIDFromBytes(p.getName().getBytes()),
+                        p.getName(),
+                        deal.getHoleCards(p).stream().map(Card::toString).toList(),
+                        showdownHands.get(p).describe()))
+            .toList();
 
     return new DealOutcome(winners, revealedHands);
   }

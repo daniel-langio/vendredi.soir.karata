@@ -23,11 +23,15 @@ public class PokerController {
   private final RestMapper rm;
   private final JwtService jwtService;
 
+  private static final Set<String> VALID_VARIANTS = Set.of("TEXAS_HOLDEM", "OMAHA");
+
   @PostMapping("/games")
   @ResponseStatus(HttpStatus.CREATED)
   public Game create(@RequestBody CreateGameRequest r) {
     validateCreateGame(r);
-    GameEntity ge = gs.createGame(r.name(), r.blinds().small(), r.blinds().big(), r.defaultBuyIn());
+    GameEntity ge =
+        gs.createGame(
+            r.name(), r.blinds().small(), r.blinds().big(), r.defaultBuyIn(), r.variant());
     return rm.toRest(gs.getGame(ge.getId()), ge, null, null, Set.of());
   }
 
@@ -124,6 +128,9 @@ public class PokerController {
     if (r.defaultBuyIn() != null && r.defaultBuyIn() <= 0) {
       throw new BadRequestException("Default buy-in must be strictly positive");
     }
+    if (r.variant() != null && !VALID_VARIANTS.contains(r.variant())) {
+      throw new BadRequestException("Unknown variant: " + r.variant());
+    }
   }
 
   private void validateJoinGame(JoinRequest r) {
@@ -155,7 +162,7 @@ public class PokerController {
     }
   }
 
-  public record CreateGameRequest(String name, Blinds blinds, Long defaultBuyIn) {}
+  public record CreateGameRequest(String name, Blinds blinds, Long defaultBuyIn, String variant) {}
 
   public record JoinRequest(Long buyInAmount) {}
 }

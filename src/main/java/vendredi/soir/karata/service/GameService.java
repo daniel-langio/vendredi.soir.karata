@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 import vendredi.soir.karata.banking.BankingService;
 import vendredi.soir.karata.core.action.*;
 import vendredi.soir.karata.core.entity.*;
+import vendredi.soir.karata.core.rules.OmahaRules;
+import vendredi.soir.karata.core.rules.Rules;
 import vendredi.soir.karata.core.rules.TexasHoldemRules;
 import vendredi.soir.karata.endpoint.rest.exception.ConflictException;
 import vendredi.soir.karata.endpoint.rest.exception.ForbiddenException;
@@ -25,15 +27,22 @@ public class GameService {
   private final BankingService bankingService;
 
   @Transactional
-  public GameEntity createGame(String name, Long sb, Long bb, Long defaultBuyIn) {
-    return gameRepository.save(
+  public GameEntity createGame(String name, Long sb, Long bb, Long defaultBuyIn, String variant) {
+    GameEntity.GameEntityBuilder builder =
         GameEntity.builder()
             .id(UUID.randomUUID())
             .name(name)
             .smallBlind(sb)
             .bigBlind(bb)
-            .defaultBuyIn(defaultBuyIn)
-            .build());
+            .defaultBuyIn(defaultBuyIn);
+    if (variant != null) {
+      builder.variant(variant);
+    }
+    return gameRepository.save(builder.build());
+  }
+
+  private static Rules rulesFor(String variant) {
+    return "OMAHA".equals(variant) ? new OmahaRules() : new TexasHoldemRules();
   }
 
   @Transactional
@@ -65,7 +74,7 @@ public class GameService {
     GameEntity ge = gameRepository.findById(gid).orElseThrow();
     List<Player> players =
         playerRepository.findByGameId(gid).stream().map(p -> new Player(p.getUsername())).toList();
-    Game game = new Game(players, new TexasHoldemRules());
+    Game game = new Game(players, rulesFor(ge.getVariant()));
     actionRepository
         .findByGameIdOrderByActionOrderAsc(gid)
         .forEach(

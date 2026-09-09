@@ -27,4 +27,9 @@ public interface Rules {
   List<Player> getBettingOrder(List<Player> players);
 
   boolean isBettingRoundComplete(Deal deal, List<Player> players);
+
+  /** How many hole cards each player is dealt at the start of a hand - 2 for Texas Hold'em. */
+  default int holeCardCount() {
+    return 2;
+  }
 }

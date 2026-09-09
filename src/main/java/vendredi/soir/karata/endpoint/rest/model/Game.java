@@ -13,4 +13,5 @@ public record Game(
     DealState currentDeal,
     YouState you,
     Boolean closed,
-    Long defaultBuyIn) {}
+    Long defaultBuyIn,
+    String variant) {}

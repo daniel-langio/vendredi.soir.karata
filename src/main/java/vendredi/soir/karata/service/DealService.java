@@ -177,7 +177,7 @@ public class DealService {
     Action bigBlind = new BigBlind(bigBlindPlayer, ge.getBigBlind());
     saveAll(gid, did, g.getDealer().execute(g, d, bigBlind));
 
-    for (int round = 0; round < 2; round++) {
+    for (int round = 0; round < g.getRules().holeCardCount(); round++) {
       for (Player p : eligible) {
         Card card = d.nextCards(1).get(0);
         Action holeCard = new DealHoleCard(p, card);
