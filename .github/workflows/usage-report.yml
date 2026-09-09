@@ -1,0 +1,39 @@
+name: Usage Report
+
+# Reports karata0's last 24h of usage every day at 05:05 UTC+3 (02:05 UTC) - real $ billing cost
+# once BigQuery billing export has data (enabled 2026-09-09, can take several hours to start and
+# never backfills), plus Cloud Run request count and Cloud Build run count/duration as an
+# always-available proxy in the meantime. Shows up in the run's own job summary.
+#
+# Auth is Workload Identity Federation, not a downloadable key (the org's
+# constraints/iam.disableServiceAccountKeyCreation policy blocks key creation outright) - GitHub's
+# own OIDC token is exchanged for a short-lived access token as github-actions-reporter@karata0,
+# a service account with only read-only monitoring/build/BigQuery roles.
+
+on:
+  schedule:
+    - cron: '5 2 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4.1.6
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/210977503792/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+          service_account: github-actions-reporter@karata0.iam.gserviceaccount.com
+          token_format: access_token
+
+      - name: Report usage and billing
+        env:
+          ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: python3 .github/scripts/usage_report.py
