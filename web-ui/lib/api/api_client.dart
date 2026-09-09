@@ -46,6 +46,7 @@ class ApiClient {
     int smallBlind,
     int bigBlind, {
     int? defaultBuyIn,
+    String? variant,
   }) async {
     final body = <String, dynamic>{
       'name': name,
@@ -55,6 +56,7 @@ class ApiClient {
       },
     };
     if (defaultBuyIn != null) body['defaultBuyIn'] = defaultBuyIn;
+    if (variant != null) body['variant'] = variant;
 
     final response = await http.post(
       Uri.parse('$baseUrl/games'),

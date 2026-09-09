@@ -142,6 +142,11 @@ class AppLocalizations {
   String get variantBoard => _s('variantBoard');
   String get variantBetting => _s('variantBetting');
   String get variantRanking => _s('variantRanking');
+  String get variantTitleOmaha => _s('variantTitleOmaha');
+  String get variantHoleCardsOmaha => _s('variantHoleCardsOmaha');
+  String get variantRankingOmaha => _s('variantRankingOmaha');
+  String get variantTexasHoldemShort => _s('variantTexasHoldemShort');
+  String get variantOmahaShort => _s('variantOmahaShort');
   String get variantSimplificationsHeading => _s('variantSimplificationsHeading');
   String get variantNoSidePots => _s('variantNoSidePots');
   String get variantNoButtonRotation => _s('variantNoButtonRotation');
@@ -254,6 +259,12 @@ class AppLocalizations {
       'variantBoard': '5 shared community cards, revealed in three stages: flop (3), turn (1), river (1)',
       'variantBetting': 'No-limit betting - you can raise up to your entire stack at any time',
       'variantRanking': 'Best 5-card hand using any combination of your hole cards and the board',
+      'variantTitleOmaha': 'No-Limit Omaha',
+      'variantHoleCardsOmaha': '4 hole cards per player, dealt face down',
+      'variantRankingOmaha':
+          'Best 5-card hand using exactly 2 of your hole cards and exactly 3 from the board',
+      'variantTexasHoldemShort': 'Texas Hold\'em',
+      'variantOmahaShort': 'Omaha',
       'variantSimplificationsHeading': 'This table simplifies a few things',
       'variantNoSidePots': 'No side pots - an all-in tie splits the whole pot evenly, regardless of stack size',
       'variantNoButtonRotation': 'No dealer button rotation - the same two seats always post the blinds',
@@ -365,6 +376,12 @@ class AppLocalizations {
       'variantBoard': '5 cartes communes partagées, révélées en trois temps : flop (3), turn (1), river (1)',
       'variantBetting': 'Mises sans limite - vous pouvez relancer jusqu\'à tout votre tapis à tout moment',
       'variantRanking': 'Meilleure main de 5 cartes parmi vos cartes et le tableau, dans n\'importe quelle combinaison',
+      'variantTitleOmaha': 'Omaha sans limite',
+      'variantHoleCardsOmaha': '4 cartes fermées par joueur, distribuées face cachée',
+      'variantRankingOmaha':
+          'Meilleure main de 5 cartes en utilisant exactement 2 de vos cartes fermées et exactement 3 du tableau',
+      'variantTexasHoldemShort': 'Texas Hold\'em',
+      'variantOmahaShort': 'Omaha',
       'variantSimplificationsHeading': 'Cette table simplifie quelques règles',
       'variantNoSidePots': 'Pas de pots secondaires - une égalité à tapis partage tout le pot également, peu importe la taille des tapis',
       'variantNoButtonRotation': 'Pas de rotation du bouton donneur - les deux mêmes sièges misent toujours les blindes',

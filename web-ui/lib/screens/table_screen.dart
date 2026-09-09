@@ -246,28 +246,31 @@ class _TableScreenState extends State<TableScreen> {
   }
 
   void _showVariantInfo() {
+    final isOmaha = _game?['variant'] == 'OMAHA';
     showDialog<void>(
       context: context,
       builder: (context) {
         final t = AppLocalizations.of(context);
+        final title = isOmaha ? t.variantTitleOmaha : t.variantTitle;
+        final holeCardsText = isOmaha ? t.variantHoleCardsOmaha : t.variantHoleCards;
+        final rankingText = isOmaha ? t.variantRankingOmaha : t.variantRanking;
         Widget bullet(String text) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Text('•  $text', style: const TextStyle(fontSize: 13, height: 1.4)),
             );
         return AlertDialog(
-          title: Text(t.variantTitle),
+          title: Text(title),
           content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(t.variantName,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                 const SizedBox(height: 12),
-                bullet(t.variantHoleCards),
+                bullet(holeCardsText),
                 bullet(t.variantBoard),
                 bullet(t.variantBetting),
-                bullet(t.variantRanking),
+                bullet(rankingText),
                 const SizedBox(height: 8),
                 Text(t.variantSimplificationsHeading,
                     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
@@ -855,34 +858,27 @@ class _SeatWidget extends StatelessWidget {
             // Cards flip face-up at each seat that reached a real showdown (won or lost) once
             // the hand concludes - a folded player has no entry here and stays hidden, per usual
             // poker etiquette.
-            if (holeCards != null && holeCards.length == 2) ...[
+            if (holeCards != null && holeCards.isNotEmpty) ...[
               const SizedBox(height: 8),
               SizedBox(
-                width: 64,
+                // Overlapping mini-card stack, sized for however many hole cards this variant
+                // deals (2 for Hold'em, 4 for Omaha) - each card overlaps the previous by 6px.
+                width: 3.0 + 30.0 + 24.0 * (holeCards.length - 1),
                 height: 42,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    Positioned(
-                      left: 3,
-                      child: PokerCardWidget(
-                        cardCode: holeCards[0]?.toString(),
-                        width: 30,
-                        height: 42,
-                        rankFontSize: 12,
-                        suitFontSize: 10,
+                    for (var i = 0; i < holeCards.length; i++)
+                      Positioned(
+                        left: 3.0 + i * 24.0,
+                        child: PokerCardWidget(
+                          cardCode: holeCards[i]?.toString(),
+                          width: 30,
+                          height: 42,
+                          rankFontSize: 12,
+                          suitFontSize: 10,
+                        ),
                       ),
-                    ),
-                    Positioned(
-                      left: 27,
-                      child: PokerCardWidget(
-                        cardCode: holeCards[1]?.toString(),
-                        width: 30,
-                        height: 42,
-                        rankFontSize: 12,
-                        suitFontSize: 10,
-                      ),
-                    ),
                   ],
                 ),
               ),

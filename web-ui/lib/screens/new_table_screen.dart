@@ -26,6 +26,7 @@ class _NewTableScreenState extends State<NewTableScreen> {
   final _smallBlindController = TextEditingController(text: '10');
   final _bigBlindController = TextEditingController(text: '20');
   final _buyInController = TextEditingController(text: '1000');
+  String _variant = 'TEXAS_HOLDEM';
   bool _isLoading = false;
 
   @override
@@ -55,7 +56,7 @@ class _NewTableScreenState extends State<NewTableScreen> {
     setState(() => _isLoading = true);
     try {
       final client = ApiClient(baseUrl: widget.serverUrl, token: widget.token);
-      final game = await client.createGame(name, sb, bb, defaultBuyIn: buyIn);
+      final game = await client.createGame(name, sb, bb, defaultBuyIn: buyIn, variant: _variant);
       final gameId = game['gameId'] as String;
       await client.buyIn(gameId, buyIn);
       await saveRecentTable(gameId, name);
@@ -119,6 +120,17 @@ class _NewTableScreenState extends State<NewTableScreen> {
                   onPressed: () => setState(() => _nameController.text = generateTableName()),
                 ),
               ],
+            ),
+            const SizedBox(height: 16),
+            SegmentedButton<String>(
+              segments: [
+                ButtonSegment(
+                    value: 'TEXAS_HOLDEM', label: Text(t.variantTexasHoldemShort)),
+                ButtonSegment(value: 'OMAHA', label: Text(t.variantOmahaShort)),
+              ],
+              selected: {_variant},
+              onSelectionChanged: (selection) =>
+                  setState(() => _variant = selection.first),
             ),
             const SizedBox(height: 11),
             Row(
