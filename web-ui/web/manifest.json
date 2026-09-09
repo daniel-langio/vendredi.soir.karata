@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#0A090C",
     "theme_color": "#0A090C",
-    "description": "Karata — play Texas Hold'em poker with your friends.",
+    "description": "Karata — play poker with your friends.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
