@@ -254,9 +254,10 @@ class ApiClient {
   }
 
   /// POST /marketplace/listings
+  /// unitPriceAr is per chip - buyers then choose their own quantity when buying.
   Future<Map<String, dynamic>> createListing({
     required int chipsAmount,
-    required int priceAr,
+    required int unitPriceAr,
     required String receivingPhoneNumber,
     required String provider,
   }) async {
@@ -265,7 +266,7 @@ class ApiClient {
       headers: _headers,
       body: jsonEncode({
         'chipsAmount': chipsAmount,
-        'priceAr': priceAr,
+        'unitPriceAr': unitPriceAr,
         'receivingPhoneNumber': receivingPhoneNumber,
         'provider': provider,
       }),
@@ -285,16 +286,32 @@ class ApiClient {
     }
   }
 
+  /// GET /marketplace/listings/{id}
+  Future<Map<String, dynamic>> getListing(String id) async {
+    final response = await http.get(Uri.parse('$_rootUrl/marketplace/listings/$id'), headers: _headers);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      _throwDetailedError(response);
+    }
+  }
+
   /// POST /marketplace/listings/{id}/purchases
+  /// Returns the created purchase (not the listing) - poll it via getPurchase.
   Future<Map<String, dynamic>> buyListing({
     required String id,
+    required int quantity,
     required String buyerPhoneNumber,
     required String pspRef,
   }) async {
     final response = await http.post(
       Uri.parse('$_rootUrl/marketplace/listings/$id/purchases'),
       headers: _headers,
-      body: jsonEncode({'buyerPhoneNumber': buyerPhoneNumber, 'pspRef': pspRef}),
+      body: jsonEncode({
+        'quantity': quantity,
+        'buyerPhoneNumber': buyerPhoneNumber,
+        'pspRef': pspRef,
+      }),
     );
     if (response.statusCode == 201) {
       return jsonDecode(response.body) as Map<String, dynamic>;
@@ -303,11 +320,11 @@ class ApiClient {
     }
   }
 
-  /// GET /marketplace/listings/{id}
+  /// GET /marketplace/purchases/{id}
   /// Re-checks payment status server-side as a side effect - poll this while waiting for a
   /// purchase to verify.
-  Future<Map<String, dynamic>> getListing(String id) async {
-    final response = await http.get(Uri.parse('$_rootUrl/marketplace/listings/$id'), headers: _headers);
+  Future<Map<String, dynamic>> getPurchase(String id) async {
+    final response = await http.get(Uri.parse('$_rootUrl/marketplace/purchases/$id'), headers: _headers);
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     } else {

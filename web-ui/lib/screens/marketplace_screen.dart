@@ -157,11 +157,11 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                                 contentPadding: EdgeInsets.zero,
                                 leading: const Icon(Icons.monetization_on_rounded,
                                     color: KarataColors.chipInk),
-                                title: Text('${listing['chipsAmount']} ${t.chips}',
+                                title: Text(t.chipsAvailable('${listing['chipsAmount']}'),
                                     style:
                                         const TextStyle(color: KarataColors.ink, fontSize: 16.5)),
                                 subtitle: Text(
-                                  '${listing['priceAr']} Ar · ${listing['provider']}',
+                                  t.unitPriceLine('${listing['unitPriceAr']}', '${listing['provider']}'),
                                   style: const TextStyle(color: KarataColors.dim, fontSize: 12.5),
                                 ),
                                 trailing: isMine

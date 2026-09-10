@@ -69,7 +69,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     try {
       await _apiClient.createListing(
         chipsAmount: chips,
-        priceAr: price,
+        unitPriceAr: price,
         receivingPhoneNumber: phone,
         provider: _provider,
       );

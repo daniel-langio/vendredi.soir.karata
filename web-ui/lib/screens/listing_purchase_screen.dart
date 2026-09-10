@@ -24,19 +24,23 @@ class ListingPurchaseScreen extends StatefulWidget {
 
 class _ListingPurchaseScreenState extends State<ListingPurchaseScreen> {
   late final ApiClient _apiClient;
-  late Map<String, dynamic> _listing;
+  final _quantityController = TextEditingController(text: '1');
   final _phoneController = TextEditingController();
   final _refController = TextEditingController();
   bool _isLoading = false;
+  Map<String, dynamic>? _purchase;
   Timer? _pollTimer;
+
+  int get _available => (widget.listing['chipsAmount'] as num).toInt();
+  int get _unitPriceAr => (widget.listing['unitPriceAr'] as num).toInt();
+  int get _quantity => int.tryParse(_quantityController.text.trim()) ?? 0;
+  int get _totalPriceAr => _quantity * _unitPriceAr;
 
   @override
   void initState() {
     super.initState();
     _apiClient = ApiClient(baseUrl: widget.serverUrl, token: widget.token);
-    _listing = widget.listing;
     _loadDefaultPhoneNumber();
-    if (_listing['status'] == 'PENDING_PAYMENT') _startPolling();
   }
 
   Future<void> _loadDefaultPhoneNumber() async {
@@ -51,6 +55,7 @@ class _ListingPurchaseScreenState extends State<ListingPurchaseScreen> {
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _quantityController.dispose();
     _phoneController.dispose();
     _refController.dispose();
     super.dispose();
@@ -60,9 +65,9 @@ class _ListingPurchaseScreenState extends State<ListingPurchaseScreen> {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
       try {
-        final updated = await _apiClient.getListing(_listing['id'] as String);
+        final updated = await _apiClient.getPurchase(_purchase!['id'] as String);
         if (!mounted) return;
-        setState(() => _listing = updated);
+        setState(() => _purchase = updated);
         if (updated['status'] != 'PENDING_PAYMENT') _pollTimer?.cancel();
       } catch (_) {
         // Transient network hiccup while polling - just try again next tick.
@@ -74,7 +79,7 @@ class _ListingPurchaseScreenState extends State<ListingPurchaseScreen> {
     final t = AppLocalizations.of(context);
     final phone = _phoneController.text.trim();
     final ref = _refController.text.trim();
-    if (phone.isEmpty || ref.isEmpty) {
+    if (_quantity <= 0 || _quantity > _available || phone.isEmpty || ref.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(t.fillValidValues), backgroundColor: KarataColors.red),
       );
@@ -83,13 +88,14 @@ class _ListingPurchaseScreenState extends State<ListingPurchaseScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final updated = await _apiClient.buyListing(
-        id: _listing['id'] as String,
+      final purchase = await _apiClient.buyListing(
+        id: widget.listing['id'] as String,
+        quantity: _quantity,
         buyerPhoneNumber: phone,
         pspRef: ref,
       );
       if (!mounted) return;
-      setState(() => _listing = updated);
+      setState(() => _purchase = purchase);
       _startPolling();
     } catch (e) {
       if (mounted) {
@@ -105,7 +111,7 @@ class _ListingPurchaseScreenState extends State<ListingPurchaseScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final status = _listing['status'] as String;
+    final status = _purchase?['status'] as String?;
 
     return Scaffold(
       appBar: AppBar(),
@@ -114,17 +120,28 @@ class _ListingPurchaseScreenState extends State<ListingPurchaseScreen> {
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
           children: [
             Text(
-              '${_listing['chipsAmount']} ${t.chips}',
+              t.chipsAvailable('$_available'),
               style: const TextStyle(
                   fontSize: 34, fontWeight: FontWeight.w300, color: KarataColors.ink),
             ),
             const SizedBox(height: 8),
             Text(
-              '${_listing['priceAr']} Ar · ${_listing['provider']}',
+              t.unitPriceLine('$_unitPriceAr', '${widget.listing['provider']}'),
               style: const TextStyle(fontSize: 13.5, color: KarataColors.dim, height: 1.45),
             ),
             const SizedBox(height: 24),
-            if (status == 'ACTIVE') ...[
+            if (status == null) ...[
+              Text(t.quantity,
+                  style: const TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w600, color: KarataColors.ink)),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _quantityController,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: KarataColors.ink),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -132,8 +149,7 @@ class _ListingPurchaseScreenState extends State<ListingPurchaseScreen> {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
-                  t.payInstructions(
-                      '${_listing['priceAr']}', '${_listing['receivingPhoneNumber']}'),
+                  t.payInstructions('$_totalPriceAr', '${widget.listing['receivingPhoneNumber']}'),
                   style: const TextStyle(color: KarataColors.ink, fontSize: 13.5, height: 1.5),
                 ),
               ),
@@ -178,7 +194,7 @@ class _ListingPurchaseScreenState extends State<ListingPurchaseScreen> {
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: KarataColors.dim, fontSize: 13.5, height: 1.5),
               ),
-            ] else if (status == 'SOLD') ...[
+            ] else ...[
               const SizedBox(height: 40),
               const Center(
                   child: Icon(Icons.check_circle, color: KarataColors.chipInk, size: 56)),
@@ -192,13 +208,6 @@ class _ListingPurchaseScreenState extends State<ListingPurchaseScreen> {
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: Text(t.close),
-              ),
-            ] else ...[
-              const SizedBox(height: 40),
-              Text(
-                t.listingNoLongerAvailable,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: KarataColors.dim, fontSize: 13.5),
               ),
             ],
           ],

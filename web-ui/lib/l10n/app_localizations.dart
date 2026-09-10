@@ -170,6 +170,9 @@ class AppLocalizations {
   String get noListingsYet => _s('noListingsYet');
   String get newListing => _s('newListing');
   String get buy => _s('buy');
+  String unitPriceLine(String price, String provider) =>
+      _fmt('unitPriceLine', {'price': price, 'provider': provider});
+  String chipsAvailable(String count) => _fmt('chipsAvailable', {'count': count});
   String get cancelListingTitle => _s('cancelListingTitle');
   String get cancelListingContent => _s('cancelListingContent');
   String get cancelListingButton => _s('cancelListingButton');
@@ -185,6 +188,7 @@ class AppLocalizations {
   String couldNotCreateListing(String error) => _fmt('couldNotCreateListing', {'error': error});
 
   // ListingPurchaseScreen
+  String get quantity => _s('quantity');
   String payInstructions(String amount, String phone) =>
       _fmt('payInstructions', {'amount': amount, 'phone': phone});
   String get yourPhoneNumber => _s('yourPhoneNumber');
@@ -331,6 +335,8 @@ class AppLocalizations {
       'noListingsYet': 'No listings for sale right now.',
       'newListing': 'New listing',
       'buy': 'Buy',
+      'unitPriceLine': '{price} Ar/chip · {provider}',
+      'chipsAvailable': '{count} available',
       'cancelListingTitle': 'Cancel this listing?',
       'cancelListingContent': 'Your chips will be refunded to your wallet.',
       'cancelListingButton': 'Cancel listing',
@@ -338,11 +344,12 @@ class AppLocalizations {
       'couldNotCancelListing': 'Could not cancel listing: {error}',
       'newListingSubtitle':
           'Your chips are set aside the moment you create this listing, until it sells or you cancel it.',
-      'priceAr': 'Price (Ar)',
+      'priceAr': 'Price per chip (Ar)',
       'receivingPhoneNumber': 'Receiving phone number',
       'paymentProvider': 'Payment provider',
       'createListing': 'Create listing',
       'couldNotCreateListing': 'Could not create listing: {error}',
+      'quantity': 'Quantity',
       'payInstructions':
           'Pay {amount} Ar to {phone} using your mobile money app, then enter the phone number you paid from and the reference (Trans Id / Ref) from your confirmation SMS below.',
       'yourPhoneNumber': 'Your phone number',
@@ -488,6 +495,8 @@ class AppLocalizations {
       'noListingsYet': 'Aucune annonce en vente pour le moment.',
       'newListing': 'Nouvelle annonce',
       'buy': 'Acheter',
+      'unitPriceLine': '{price} Ar/jeton · {provider}',
+      'chipsAvailable': '{count} disponibles',
       'cancelListingTitle': 'Annuler cette annonce ?',
       'cancelListingContent': 'Vos jetons seront remboursés sur votre portefeuille.',
       'cancelListingButton': "Annuler l'annonce",
@@ -495,11 +504,12 @@ class AppLocalizations {
       'couldNotCancelListing': "Impossible d'annuler l'annonce : {error}",
       'newListingSubtitle':
           'Vos jetons sont mis de côté dès la création de cette annonce, jusqu\'à sa vente ou son annulation.',
-      'priceAr': 'Prix (Ar)',
+      'priceAr': 'Prix par jeton (Ar)',
       'receivingPhoneNumber': 'Numéro de téléphone de réception',
       'paymentProvider': 'Opérateur de paiement',
       'createListing': "Créer l'annonce",
       'couldNotCreateListing': "Impossible de créer l'annonce : {error}",
+      'quantity': 'Quantité',
       'payInstructions':
           "Payez {amount} Ar au {phone} via votre application mobile money, puis saisissez le numéro depuis lequel vous avez payé et la référence (Trans Id / Ref) reçue par SMS ci-dessous.",
       'yourPhoneNumber': 'Votre numéro de téléphone',
