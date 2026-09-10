@@ -164,6 +164,38 @@ class AppLocalizations {
   String get variantSimplifiedMinRaise => _s('variantSimplifiedMinRaise');
   String get close => _s('close');
 
+  // MarketplaceScreen
+  String get marketplaceTitle => _s('marketplaceTitle');
+  String get marketplaceSubtitle => _s('marketplaceSubtitle');
+  String get noListingsYet => _s('noListingsYet');
+  String get newListing => _s('newListing');
+  String get buy => _s('buy');
+  String get cancelListingTitle => _s('cancelListingTitle');
+  String get cancelListingContent => _s('cancelListingContent');
+  String get cancelListingButton => _s('cancelListingButton');
+  String couldNotLoadListings(String error) => _fmt('couldNotLoadListings', {'error': error});
+  String couldNotCancelListing(String error) => _fmt('couldNotCancelListing', {'error': error});
+
+  // CreateListingScreen
+  String get newListingSubtitle => _s('newListingSubtitle');
+  String get priceAr => _s('priceAr');
+  String get receivingPhoneNumber => _s('receivingPhoneNumber');
+  String get paymentProvider => _s('paymentProvider');
+  String get createListing => _s('createListing');
+  String couldNotCreateListing(String error) => _fmt('couldNotCreateListing', {'error': error});
+
+  // ListingPurchaseScreen
+  String payInstructions(String amount, String phone) =>
+      _fmt('payInstructions', {'amount': amount, 'phone': phone});
+  String get yourPhoneNumber => _s('yourPhoneNumber');
+  String get transactionRef => _s('transactionRef');
+  String get transactionRefHint => _s('transactionRefHint');
+  String get submitPayment => _s('submitPayment');
+  String get waitingForConfirmation => _s('waitingForConfirmation');
+  String get chipsCredited => _s('chipsCredited');
+  String get listingNoLongerAvailable => _s('listingNoLongerAvailable');
+  String couldNotBuyListing(String error) => _fmt('couldNotBuyListing', {'error': error});
+
   static const Map<String, Map<String, String>> _strings = {
     'en': {
       'cancel': 'Cancel',
@@ -192,7 +224,7 @@ class AppLocalizations {
       'logOut': 'Log out',
       'language': 'Language',
       'systemDefault': 'System default',
-      'walletBalance': 'Wallet balance',
+      'walletBalance': 'Wallet balance - tap to open the marketplace',
       'newTableTitle': 'New table',
       'newTableSubtitle':
           'Name and blinds are all the server keeps. Everything else is set when each player sits down.',
@@ -293,6 +325,34 @@ class AppLocalizations {
       'variantNoButtonRotation': 'No dealer button rotation - the same two seats always post the blinds',
       'variantSimplifiedMinRaise': 'Minimum raise is simplified (double the current bet), not the standard last-raise-size rule',
       'close': 'Close',
+      'marketplaceTitle': 'Marketplace',
+      'marketplaceSubtitle':
+          'Buy chips at a price the seller set - no negotiating. Selling is invite-only for now.',
+      'noListingsYet': 'No listings for sale right now.',
+      'newListing': 'New listing',
+      'buy': 'Buy',
+      'cancelListingTitle': 'Cancel this listing?',
+      'cancelListingContent': 'Your chips will be refunded to your wallet.',
+      'cancelListingButton': 'Cancel listing',
+      'couldNotLoadListings': 'Could not load listings: {error}',
+      'couldNotCancelListing': 'Could not cancel listing: {error}',
+      'newListingSubtitle':
+          'Your chips are set aside the moment you create this listing, until it sells or you cancel it.',
+      'priceAr': 'Price (Ar)',
+      'receivingPhoneNumber': 'Receiving phone number',
+      'paymentProvider': 'Payment provider',
+      'createListing': 'Create listing',
+      'couldNotCreateListing': 'Could not create listing: {error}',
+      'payInstructions':
+          'Pay {amount} Ar to {phone} using your mobile money app, then enter the phone number you paid from and the reference (Trans Id / Ref) from your confirmation SMS below.',
+      'yourPhoneNumber': 'Your phone number',
+      'transactionRef': 'Transaction reference',
+      'transactionRefHint': 'e.g. the Ref or Trans Id from your SMS',
+      'submitPayment': "I've paid",
+      'waitingForConfirmation': 'Waiting for the payment to be confirmed...',
+      'chipsCredited': 'Chips credited to your wallet!',
+      'listingNoLongerAvailable': 'This listing is no longer available.',
+      'couldNotBuyListing': 'Could not submit payment: {error}',
     },
     'fr': {
       'cancel': 'Annuler',
@@ -321,7 +381,7 @@ class AppLocalizations {
       'logOut': 'Se déconnecter',
       'language': 'Langue',
       'systemDefault': 'Système',
-      'walletBalance': 'Solde du portefeuille',
+      'walletBalance': 'Solde du portefeuille - touchez pour ouvrir le marché',
       'newTableTitle': 'Nouvelle table',
       'newTableSubtitle':
           'Le serveur ne conserve que le nom et les blindes. Tout le reste est défini quand chaque joueur s\'installe.',
@@ -422,6 +482,34 @@ class AppLocalizations {
       'variantNoButtonRotation': 'Pas de rotation du bouton donneur - les deux mêmes sièges misent toujours les blindes',
       'variantSimplifiedMinRaise': 'Relance minimale simplifiée (le double de la mise actuelle), pas la règle standard de la taille de la dernière relance',
       'close': 'Fermer',
+      'marketplaceTitle': 'Marché',
+      'marketplaceSubtitle':
+          "Achetez des jetons au prix fixé par le vendeur - non négociable. La vente est réservée pour l'instant.",
+      'noListingsYet': 'Aucune annonce en vente pour le moment.',
+      'newListing': 'Nouvelle annonce',
+      'buy': 'Acheter',
+      'cancelListingTitle': 'Annuler cette annonce ?',
+      'cancelListingContent': 'Vos jetons seront remboursés sur votre portefeuille.',
+      'cancelListingButton': "Annuler l'annonce",
+      'couldNotLoadListings': 'Impossible de charger les annonces : {error}',
+      'couldNotCancelListing': "Impossible d'annuler l'annonce : {error}",
+      'newListingSubtitle':
+          'Vos jetons sont mis de côté dès la création de cette annonce, jusqu\'à sa vente ou son annulation.',
+      'priceAr': 'Prix (Ar)',
+      'receivingPhoneNumber': 'Numéro de téléphone de réception',
+      'paymentProvider': 'Opérateur de paiement',
+      'createListing': "Créer l'annonce",
+      'couldNotCreateListing': "Impossible de créer l'annonce : {error}",
+      'payInstructions':
+          "Payez {amount} Ar au {phone} via votre application mobile money, puis saisissez le numéro depuis lequel vous avez payé et la référence (Trans Id / Ref) reçue par SMS ci-dessous.",
+      'yourPhoneNumber': 'Votre numéro de téléphone',
+      'transactionRef': 'Référence de transaction',
+      'transactionRefHint': 'ex. le Ref ou Trans Id de votre SMS',
+      'submitPayment': "J'ai payé",
+      'waitingForConfirmation': 'En attente de la confirmation du paiement...',
+      'chipsCredited': 'Jetons crédités sur votre portefeuille !',
+      'listingNoLongerAvailable': "Cette annonce n'est plus disponible.",
+      'couldNotBuyListing': "Impossible d'envoyer le paiement : {error}",
     },
   };
 }

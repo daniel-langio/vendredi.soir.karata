@@ -11,6 +11,9 @@ import 'screens/menu_screen.dart';
 import 'screens/new_table_screen.dart';
 import 'screens/join_table_screen.dart';
 import 'screens/table_screen.dart';
+import 'screens/marketplace_screen.dart';
+import 'screens/create_listing_screen.dart';
+import 'screens/listing_purchase_screen.dart';
 import 'theme.dart';
 
 void main() {
@@ -106,6 +109,27 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
         ? const RootScreen()
         : JoinTableScreen(
             serverUrl: session.serverUrl, token: session.token, username: session.username);
+  } else if (segments.length == 1 && segments[0] == 'marketplace') {
+    page = session == null
+        ? const RootScreen()
+        : MarketplaceScreen(
+            serverUrl: session.serverUrl, token: session.token, username: session.username);
+  } else if (segments.length == 2 && segments[0] == 'marketplace' && segments[1] == 'new') {
+    page = session == null
+        ? const RootScreen()
+        : CreateListingScreen(
+            serverUrl: session.serverUrl, token: session.token, username: session.username);
+  } else if (segments.length == 2 && segments[0] == 'marketplace' && segments[1] == 'listing') {
+    final args = settings.arguments as Map?;
+    final listing = args?['listing'] as Map<String, dynamic>?;
+    page = session == null || listing == null
+        ? const RootScreen()
+        : ListingPurchaseScreen(
+            serverUrl: session.serverUrl,
+            token: session.token,
+            username: session.username,
+            listing: listing,
+          );
   } else if (segments.length == 2 && segments[0] == 'table') {
     final gameId = segments[1];
     page = session == null

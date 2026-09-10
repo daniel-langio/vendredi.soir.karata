@@ -122,22 +122,35 @@ class _NewTableScreenState extends State<NewTableScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            SegmentedButton<String>(
-              segments: [
-                ButtonSegment(
-                    value: 'TEXAS_HOLDEM', label: Text(t.variantTexasHoldemShort)),
-                ButtonSegment(value: 'OMAHA', label: Text(t.variantOmahaShort)),
-                ButtonSegment(
-                    value: 'FIVE_CARD_DRAW', label: Text(t.variantFiveCardDrawShort)),
-                ButtonSegment(
+            DropdownButtonFormField<String>(
+              initialValue: _variant,
+              dropdownColor: KarataColors.field,
+              style: const TextStyle(color: KarataColors.ink),
+              decoration: InputDecoration(labelText: t.gameVariant),
+              items: [
+                DropdownMenuItem(value: 'TEXAS_HOLDEM', child: Text(t.variantTexasHoldemShort)),
+                DropdownMenuItem(value: 'OMAHA', child: Text(t.variantOmahaShort)),
+                DropdownMenuItem(
+                    value: 'FIVE_CARD_DRAW', child: Text(t.variantFiveCardDrawShort)),
+                DropdownMenuItem(
                   value: 'SEVEN_CARD_STUD',
-                  label: Text('${t.variantSevenCardStudShort} (${t.comingSoon})'),
-                  enabled: false,
+                  child: Text('${t.variantSevenCardStudShort} (${t.comingSoon})',
+                      style: const TextStyle(color: KarataColors.dim)),
                 ),
               ],
-              selected: {_variant},
-              onSelectionChanged: (selection) =>
-                  setState(() => _variant = selection.first),
+              // SEVEN_CARD_STUD is shown (dimmed) but not selectable yet - DropdownMenuItem has
+              // no per-item `enabled` flag, so this rejects the pick and leaves _variant as-is.
+              onChanged: (value) {
+                if (value == 'SEVEN_CARD_STUD') {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text('${t.variantSevenCardStudShort} - ${t.comingSoon}'),
+                        backgroundColor: KarataColors.pill),
+                  );
+                  return;
+                }
+                setState(() => _variant = value ?? _variant);
+              },
             ),
             const SizedBox(height: 11),
             Row(

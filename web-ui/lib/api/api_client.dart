@@ -212,6 +212,109 @@ class ApiClient {
     }
   }
 
+  /// GET /account
+  /// The account's stored phone number, if any - purely a form-default convenience, never
+  /// authoritative (the number that matters for matching is whatever's entered on a given
+  /// listing/purchase).
+  Future<String?> getAccountPhoneNumber() async {
+    final response = await http.get(Uri.parse('$baseUrl/account'), headers: _headers);
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      return body['phoneNumber'] as String?;
+    } else {
+      _throwDetailedError(response);
+    }
+  }
+
+  /// PUT /account/phone-number
+  Future<void> setAccountPhoneNumber(String phoneNumber) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/account/phone-number'),
+      headers: _headers,
+      body: jsonEncode({'phoneNumber': phoneNumber}),
+    );
+    if (response.statusCode != 200) {
+      _throwDetailedError(response);
+    }
+  }
+
+  // The marketplace lives at the API root (sibling to /poker), not under it - baseUrl already
+  // has /poker baked in (see WelcomeScreen.defaultServerUrl), so strip it back off here.
+  String get _rootUrl =>
+      baseUrl.endsWith('/poker') ? baseUrl.substring(0, baseUrl.length - '/poker'.length) : baseUrl;
+
+  /// GET /marketplace/listings
+  Future<List<Map<String, dynamic>>> listMarketplaceListings() async {
+    final response = await http.get(Uri.parse('$_rootUrl/marketplace/listings'), headers: _headers);
+    if (response.statusCode == 200) {
+      return (jsonDecode(response.body) as List).cast<Map<String, dynamic>>();
+    } else {
+      _throwDetailedError(response);
+    }
+  }
+
+  /// POST /marketplace/listings
+  Future<Map<String, dynamic>> createListing({
+    required int chipsAmount,
+    required int priceAr,
+    required String receivingPhoneNumber,
+    required String provider,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_rootUrl/marketplace/listings'),
+      headers: _headers,
+      body: jsonEncode({
+        'chipsAmount': chipsAmount,
+        'priceAr': priceAr,
+        'receivingPhoneNumber': receivingPhoneNumber,
+        'provider': provider,
+      }),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      _throwDetailedError(response);
+    }
+  }
+
+  /// DELETE /marketplace/listings/{id}
+  Future<void> cancelListing(String id) async {
+    final response = await http.delete(Uri.parse('$_rootUrl/marketplace/listings/$id'), headers: _headers);
+    if (response.statusCode != 200) {
+      _throwDetailedError(response);
+    }
+  }
+
+  /// POST /marketplace/listings/{id}/purchases
+  Future<Map<String, dynamic>> buyListing({
+    required String id,
+    required String buyerPhoneNumber,
+    required String pspRef,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_rootUrl/marketplace/listings/$id/purchases'),
+      headers: _headers,
+      body: jsonEncode({'buyerPhoneNumber': buyerPhoneNumber, 'pspRef': pspRef}),
+    );
+    if (response.statusCode == 201) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      _throwDetailedError(response);
+    }
+  }
+
+  /// GET /marketplace/listings/{id}
+  /// Re-checks payment status server-side as a side effect - poll this while waiting for a
+  /// purchase to verify.
+  Future<Map<String, dynamic>> getListing(String id) async {
+    final response = await http.get(Uri.parse('$_rootUrl/marketplace/listings/$id'), headers: _headers);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
+      _throwDetailedError(response);
+    }
+  }
+
   Never _throwDetailedError(http.Response response) {
     try {
       final body = jsonDecode(response.body) as Map<String, dynamic>;

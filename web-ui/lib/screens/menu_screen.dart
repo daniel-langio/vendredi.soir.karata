@@ -114,6 +114,11 @@ class _MenuScreenState extends State<MenuScreen> {
     _loadWallet();
   }
 
+  Future<void> _openMarketplace() async {
+    await Navigator.of(context).pushNamed('/marketplace', arguments: _sessionArgs);
+    _loadWallet();
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
@@ -164,27 +169,31 @@ class _MenuScreenState extends State<MenuScreen> {
                   if (_walletChips != null)
                     Tooltip(
                       message: t.walletBalance,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: KarataColors.chipBg,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.monetization_on_rounded,
-                                color: KarataColors.chipInk, size: 24),
-                            const SizedBox(width: 8),
-                            Text(
-                              '$_walletChips',
-                              style: const TextStyle(
-                                fontSize: 30,
-                                fontWeight: FontWeight.bold,
-                                color: KarataColors.chipInk,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(999),
+                        onTap: _openMarketplace,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: KarataColors.chipBg,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.monetization_on_rounded,
+                                  color: KarataColors.chipInk, size: 24),
+                              const SizedBox(width: 8),
+                              Text(
+                                '$_walletChips',
+                                style: const TextStyle(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.bold,
+                                  color: KarataColors.chipInk,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
