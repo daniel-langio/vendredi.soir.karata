@@ -73,15 +73,25 @@ class MarketplaceControllerIT {
   }
 
   @Test
-  void buy_validation_requires_psp_ref_and_phone() throws Exception {
+  void buy_validation_requires_quantity_psp_ref_and_phone() throws Exception {
     when(jwtService.validateAndExtractUsername(any())).thenReturn("bob");
 
-    InitiatePurchaseRequest missingRef = new InitiatePurchaseRequest("+261340000099", null);
+    InitiatePurchaseRequest missingRef = new InitiatePurchaseRequest(300L, "+261340000099", null);
     mockMvc
         .perform(
             post("/marketplace/listings/" + UUID.randomUUID() + "/purchases")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(missingRef)))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+
+    InitiatePurchaseRequest missingQuantity =
+        new InitiatePurchaseRequest(null, "+261340000099", "SOME-REF");
+    mockMvc
+        .perform(
+            post("/marketplace/listings/" + UUID.randomUUID() + "/purchases")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(missingQuantity)))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
 

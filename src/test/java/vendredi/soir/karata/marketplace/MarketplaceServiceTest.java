@@ -17,6 +17,7 @@ import vendredi.soir.karata.endpoint.rest.exception.ForbiddenException;
 
 class MarketplaceServiceTest {
   private ChipListingRepository chipListingRepository;
+  private ListingPurchaseRepository listingPurchaseRepository;
   private BankingService bankingService;
   private IfayClient ifayClient;
   private MarketplaceService service;
@@ -24,29 +25,33 @@ class MarketplaceServiceTest {
   @BeforeEach
   void setUp() {
     chipListingRepository = mock(ChipListingRepository.class);
+    listingPurchaseRepository = mock(ListingPurchaseRepository.class);
     bankingService = mock(BankingService.class);
     ifayClient = mock(IfayClient.class);
     when(chipListingRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-    service = new MarketplaceService(chipListingRepository, bankingService, ifayClient, "dev");
+    when(listingPurchaseRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+    service =
+        new MarketplaceService(
+            chipListingRepository, listingPurchaseRepository, bankingService, ifayClient, "dev");
   }
 
   @Test
   void only_allowlisted_sellers_can_create_a_listing() {
     assertThrows(
         ForbiddenException.class,
-        () -> service.createListing("alice", 1000, 2000, "+261340000001", PaymentProvider.MVOLA));
+        () -> service.createListing("alice", 1000, 2, "+261340000001", PaymentProvider.MVOLA));
     verifyNoInteractions(bankingService);
   }
 
   @Test
   void creating_a_listing_escrows_chips_out_of_the_sellers_wallet() {
     ChipListing listing =
-        service.createListing("dev", 1000, 2000, "+261340000001", PaymentProvider.MVOLA);
+        service.createListing("dev", 1000, 2, "+261340000001", PaymentProvider.MVOLA);
 
     verify(bankingService).debit("dev", 1000);
     assertEquals(ListingStatus.ACTIVE, listing.getStatus());
     assertEquals(1000, listing.getChipsAmount());
-    assertEquals(2000, listing.getPriceAr());
+    assertEquals(2, listing.getUnitPriceAr());
   }
 
   @Test
@@ -57,18 +62,18 @@ class MarketplaceServiceTest {
 
     assertThrows(
         BadRequestException.class,
-        () -> service.createListing("dev", 999_999, 2000, "+261340000001", PaymentProvider.MVOLA));
+        () -> service.createListing("dev", 999_999, 2, "+261340000001", PaymentProvider.MVOLA));
     verify(chipListingRepository, never()).save(any());
   }
 
   @Test
-  void cancelling_refunds_the_seller_and_only_works_on_active_listings() {
+  void cancelling_refunds_the_seller_the_remaining_chips_and_only_works_on_active_listings() {
     ChipListing listing = activeListing();
     when(chipListingRepository.findByIdForUpdate(listing.getId())).thenReturn(Optional.of(listing));
 
     service.cancelListing("dev", listing.getId());
 
-    verify(bankingService).credit("dev", listing.getChipsAmount());
+    verify(bankingService).credit("dev", 1000);
     assertEquals(ListingStatus.CANCELLED, listing.getStatus());
   }
 
@@ -82,27 +87,44 @@ class MarketplaceServiceTest {
   }
 
   @Test
-  void initiating_a_purchase_calls_ifay_with_the_listings_own_receiving_number() {
+  void buying_a_partial_quantity_charges_quantity_times_unit_price_and_reserves_the_stock() {
     ChipListing listing = activeListing();
     when(chipListingRepository.findByIdForUpdate(listing.getId())).thenReturn(Optional.of(listing));
     when(ifayClient.submitClaim(any(), any(), anyLong(), any(), any()))
         .thenReturn(new IfayClient.ClaimResponse("payment-1", "PENDING", null));
 
-    ChipListing result =
-        service.initiatePurchase("bob", listing.getId(), "+261340000099", "SOME-REF");
+    ListingPurchase purchase =
+        service.initiatePurchase("bob", listing.getId(), 300, "+261340000099", "SOME-REF");
 
     ArgumentCaptor<String> receiverCaptor = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<Long> amountCaptor = ArgumentCaptor.forClass(Long.class);
     verify(ifayClient)
         .submitClaim(
             eq("+261340000099"),
             receiverCaptor.capture(),
-            eq(listing.getPriceAr()),
+            amountCaptor.capture(),
             eq(PaymentProvider.MVOLA),
             eq("SOME-REF"));
     assertEquals(listing.getReceivingPhoneNumber(), receiverCaptor.getValue());
-    assertEquals(ListingStatus.PENDING_PAYMENT, result.getStatus());
-    assertEquals("bob", result.getBuyerUsername());
-    assertEquals("payment-1", result.getIfayPaymentId());
+    assertEquals(300L * listing.getUnitPriceAr(), amountCaptor.getValue());
+    assertEquals(300L * listing.getUnitPriceAr(), purchase.getTotalPriceAr());
+    assertEquals(300, purchase.getQuantity());
+    assertEquals(PurchaseStatus.PENDING_PAYMENT, purchase.getStatus());
+    assertEquals("bob", purchase.getBuyerUsername());
+    assertEquals("payment-1", purchase.getIfayPaymentId());
+    // Reserved out of the listing's remaining stock immediately, before payment verifies.
+    assertEquals(700, listing.getChipsAmount());
+  }
+
+  @Test
+  void cannot_buy_more_than_the_listings_remaining_stock() {
+    ChipListing listing = activeListing();
+    when(chipListingRepository.findByIdForUpdate(listing.getId())).thenReturn(Optional.of(listing));
+
+    assertThrows(
+        BadRequestException.class,
+        () -> service.initiatePurchase("bob", listing.getId(), 1001, "+261340000099", "SOME-REF"));
+    verifyNoInteractions(ifayClient);
   }
 
   @Test
@@ -112,40 +134,37 @@ class MarketplaceServiceTest {
 
     assertThrows(
         BadRequestException.class,
-        () -> service.initiatePurchase("dev", listing.getId(), "+261340000099", "SOME-REF"));
+        () -> service.initiatePurchase("dev", listing.getId(), 100, "+261340000099", "SOME-REF"));
     verifyNoInteractions(ifayClient);
   }
 
   @Test
   void checkAndComplete_credits_the_buyer_once_ifay_reports_verified() {
-    ChipListing listing = activeListing();
-    listing.setStatus(ListingStatus.PENDING_PAYMENT);
-    listing.setBuyerUsername("bob");
-    listing.setIfayPaymentId("payment-1");
-    when(chipListingRepository.findByIdForUpdate(listing.getId())).thenReturn(Optional.of(listing));
+    ListingPurchase purchase = pendingPurchase();
+    when(listingPurchaseRepository.findByIdForUpdate(purchase.getId()))
+        .thenReturn(Optional.of(purchase));
     when(ifayClient.getClaim("payment-1"))
-        .thenReturn(new IfayClient.ClaimResponse("payment-1", "VERIFIED", listing.getPriceAr()));
+        .thenReturn(
+            new IfayClient.ClaimResponse("payment-1", "VERIFIED", purchase.getTotalPriceAr()));
 
-    ChipListing result = service.checkAndComplete(listing.getId());
+    ListingPurchase result = service.checkAndComplete(purchase.getId());
 
-    verify(bankingService).credit("bob", listing.getChipsAmount());
-    assertEquals(ListingStatus.SOLD, result.getStatus());
+    verify(bankingService).credit("bob", purchase.getQuantity());
+    assertEquals(PurchaseStatus.COMPLETED, result.getStatus());
   }
 
   @Test
   void checkAndComplete_does_nothing_while_still_pending() {
-    ChipListing listing = activeListing();
-    listing.setStatus(ListingStatus.PENDING_PAYMENT);
-    listing.setBuyerUsername("bob");
-    listing.setIfayPaymentId("payment-1");
-    when(chipListingRepository.findByIdForUpdate(listing.getId())).thenReturn(Optional.of(listing));
+    ListingPurchase purchase = pendingPurchase();
+    when(listingPurchaseRepository.findByIdForUpdate(purchase.getId()))
+        .thenReturn(Optional.of(purchase));
     when(ifayClient.getClaim("payment-1"))
         .thenReturn(new IfayClient.ClaimResponse("payment-1", "PENDING", null));
 
-    service.checkAndComplete(listing.getId());
+    service.checkAndComplete(purchase.getId());
 
     verifyNoInteractions(bankingService);
-    assertEquals(ListingStatus.PENDING_PAYMENT, listing.getStatus());
+    assertEquals(PurchaseStatus.PENDING_PAYMENT, purchase.getStatus());
   }
 
   private static ChipListing activeListing() {
@@ -153,10 +172,22 @@ class MarketplaceServiceTest {
         .id(UUID.randomUUID())
         .sellerUsername("dev")
         .chipsAmount(1000)
-        .priceAr(2000)
+        .unitPriceAr(2)
         .receivingPhoneNumber("+261340000001")
         .provider(PaymentProvider.MVOLA)
         .status(ListingStatus.ACTIVE)
+        .build();
+  }
+
+  private static ListingPurchase pendingPurchase() {
+    return ListingPurchase.builder()
+        .id(UUID.randomUUID())
+        .listingId(UUID.randomUUID())
+        .buyerUsername("bob")
+        .quantity(300)
+        .totalPriceAr(600)
+        .status(PurchaseStatus.PENDING_PAYMENT)
+        .ifayPaymentId("payment-1")
         .build();
   }
 }

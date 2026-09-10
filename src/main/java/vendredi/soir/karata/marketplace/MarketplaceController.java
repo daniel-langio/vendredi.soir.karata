@@ -24,7 +24,7 @@ public class MarketplaceController {
     validate(r);
     return toResponse(
         marketplaceService.createListing(
-            username, r.chipsAmount(), r.priceAr(), r.receivingPhoneNumber(), r.provider()));
+            username, r.chipsAmount(), r.unitPriceAr(), r.receivingPhoneNumber(), r.provider()));
   }
 
   @GetMapping
@@ -32,6 +32,14 @@ public class MarketplaceController {
       @RequestHeader(value = "Authorization", required = false) String authHeader) {
     jwtService.validateAndExtractUsername(authHeader);
     return marketplaceService.listActive().stream().map(this::toResponse).toList();
+  }
+
+  @GetMapping("/{id}")
+  public ListingResponse get(
+      @RequestHeader(value = "Authorization", required = false) String authHeader,
+      @PathVariable UUID id) {
+    jwtService.validateAndExtractUsername(authHeader);
+    return toResponse(marketplaceService.getListing(id));
   }
 
   @DeleteMapping("/{id}")
@@ -44,27 +52,23 @@ public class MarketplaceController {
 
   @PostMapping("/{id}/purchases")
   @ResponseStatus(HttpStatus.CREATED)
-  public ListingResponse buy(
+  public PurchaseController.PurchaseResponse buy(
       @RequestHeader(value = "Authorization", required = false) String authHeader,
       @PathVariable UUID id,
       @RequestBody InitiatePurchaseRequest r) {
     String username = jwtService.validateAndExtractUsername(authHeader);
-    if (r == null || r.buyerPhoneNumber() == null || r.buyerPhoneNumber().isBlank()) {
+    if (r == null || r.quantity() == null || r.quantity() <= 0) {
+      throw new BadRequestException("quantity must be strictly positive");
+    }
+    if (r.buyerPhoneNumber() == null || r.buyerPhoneNumber().isBlank()) {
       throw new BadRequestException("buyerPhoneNumber is required");
     }
     if (r.pspRef() == null || r.pspRef().isBlank()) {
       throw new BadRequestException("pspRef is required");
     }
-    return toResponse(
-        marketplaceService.initiatePurchase(username, id, r.buyerPhoneNumber(), r.pspRef()));
-  }
-
-  @GetMapping("/{id}")
-  public ListingResponse get(
-      @RequestHeader(value = "Authorization", required = false) String authHeader,
-      @PathVariable UUID id) {
-    jwtService.validateAndExtractUsername(authHeader);
-    return toResponse(marketplaceService.checkAndComplete(id));
+    return PurchaseController.toResponse(
+        marketplaceService.initiatePurchase(
+            username, id, r.quantity(), r.buyerPhoneNumber(), r.pspRef()));
   }
 
   private void validate(CreateListingRequest r) {
@@ -74,8 +78,8 @@ public class MarketplaceController {
     if (r.chipsAmount() == null || r.chipsAmount() <= 0) {
       throw new BadRequestException("chipsAmount must be strictly positive");
     }
-    if (r.priceAr() == null || r.priceAr() <= 0) {
-      throw new BadRequestException("priceAr must be strictly positive");
+    if (r.unitPriceAr() == null || r.unitPriceAr() <= 0) {
+      throw new BadRequestException("unitPriceAr must be strictly positive");
     }
     if (r.receivingPhoneNumber() == null || r.receivingPhoneNumber().isBlank()) {
       throw new BadRequestException("receivingPhoneNumber is required");
@@ -90,25 +94,23 @@ public class MarketplaceController {
         l.getId().toString(),
         l.getSellerUsername(),
         l.getChipsAmount(),
-        l.getPriceAr(),
+        l.getUnitPriceAr(),
         l.getProvider().name(),
         l.getReceivingPhoneNumber(),
-        l.getStatus().name(),
-        l.getBuyerUsername());
+        l.getStatus().name());
   }
 
   public record CreateListingRequest(
-      Long chipsAmount, Long priceAr, String receivingPhoneNumber, PaymentProvider provider) {}
+      Long chipsAmount, Long unitPriceAr, String receivingPhoneNumber, PaymentProvider provider) {}
 
-  public record InitiatePurchaseRequest(String buyerPhoneNumber, String pspRef) {}
+  public record InitiatePurchaseRequest(Long quantity, String buyerPhoneNumber, String pspRef) {}
 
   public record ListingResponse(
       String id,
       String sellerUsername,
       long chipsAmount,
-      long priceAr,
+      long unitPriceAr,
       String provider,
       String receivingPhoneNumber,
-      String status,
-      String buyerUsername) {}
+      String status) {}
 }

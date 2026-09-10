@@ -19,11 +19,11 @@ class MarketplaceReconciler {
 
   @Scheduled(fixedDelay = 60_000)
   void reconcilePendingPurchases() {
-    for (ChipListing listing : marketplaceService.findAllPending()) {
+    for (ListingPurchase purchase : marketplaceService.findAllPendingPurchases()) {
       try {
-        marketplaceService.checkAndComplete(listing.getId());
+        marketplaceService.checkAndComplete(purchase.getId());
       } catch (Exception e) {
-        log.warn("Failed to reconcile listing {}", listing.getId(), e);
+        log.warn("Failed to reconcile purchase {}", purchase.getId(), e);
       }
     }
   }
