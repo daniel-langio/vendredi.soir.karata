@@ -2,8 +2,10 @@ package vendredi.soir.karata;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
+@EnableScheduling
 @PojaGenerated
 public class PojaApplication {
 

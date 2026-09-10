@@ -17,4 +17,11 @@ public class AccountEntity {
   private String username;
 
   private String passwordHash;
+
+  /**
+   * Not verified/authoritative - purely a convenience default for the marketplace listing form.
+   * Whatever phone number actually matters for a given payment is always the one entered on that
+   * specific listing/purchase, matched via ifay.
+   */
+  private String phoneNumber;
 }
