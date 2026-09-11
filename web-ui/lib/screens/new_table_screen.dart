@@ -23,9 +23,9 @@ class NewTableScreen extends StatefulWidget {
 
 class _NewTableScreenState extends State<NewTableScreen> {
   final _nameController = TextEditingController(text: generateTableName());
-  final _smallBlindController = TextEditingController(text: '10');
-  final _bigBlindController = TextEditingController(text: '20');
-  final _buyInController = TextEditingController(text: '1000');
+  final _smallBlindController = TextEditingController(text: '1');
+  final _bigBlindController = TextEditingController(text: '2');
+  final _buyInController = TextEditingController(text: '200');
   String _variant = 'TEXAS_HOLDEM';
   bool _isLoading = false;
 

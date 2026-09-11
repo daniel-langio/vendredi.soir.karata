@@ -25,7 +25,7 @@ class JoinTableScreen extends StatefulWidget {
 
 class _JoinTableScreenState extends State<JoinTableScreen> {
   final _linkController = TextEditingController();
-  final _buyInController = TextEditingController(text: '1000');
+  final _buyInController = TextEditingController(text: '200');
 
   bool _isLoading = false;
   Map<String, dynamic>? _preview;
